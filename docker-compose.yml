@@ -1,0 +1,60 @@
+version: "3.8"
+
+services:
+  ros-master:
+    build:
+      context: ./ros-master-node
+    container_name: ros-master-container
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_IP=172.22.0.2
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.2
+
+  orb-slam3:
+    build:
+      context: ./orb-slam3-node
+    container_name: ros-orb-slam3-container
+    depends_on:
+      - ros-master
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_IP=172.22.0.3
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              count: all
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.3
+    
+  dummy:
+    build:
+      context: ./testing-node
+    container_name: ros-dummy-container
+    depends_on:
+      - ros-master
+    environment:
+      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_IP=172.22.0.6
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.6
+
+networks:
+  ros_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
