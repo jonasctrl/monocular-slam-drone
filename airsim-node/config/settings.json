@@ -12,18 +12,18 @@
     "SimpleFlight": {
       "VehicleType": "SimpleFlight",
       "Cameras": {
-        "0": {
+        "front-center": {
           "CaptureSettings": [
             {
               "ImageType": 0,
-              "Width": 1280,
-              "Height": 720,
-              "FOV_Degrees": 90.0
+              "Width": 752,
+              "Height": 480,
+              "FOV_Degrees": 60
             }
           ],
           "X": 0.0,
           "Y": 0.0,
-          "Z": 0.0,
+          "Z": -1,
           "Pitch": 0.0,
           "Roll": 0.0,
           "Yaw": 0.0
