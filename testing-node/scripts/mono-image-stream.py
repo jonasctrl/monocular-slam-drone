@@ -9,13 +9,6 @@ def read_images(image_folder):
     image_files = sorted([os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.endswith('.png')])
     return image_files
 
-def create_ros_time(timestamp, start_time):
-    relative_time = timestamp - start_time
-    relative_time = max(0, relative_time)
-    secs = int(relative_time)
-    nsecs = int((relative_time - secs) * 1e9)
-    return rospy.Time(secs, nsecs)
-
 def main():
     rospy.init_node('euroc_simulator', anonymous=True)
     image_pub = rospy.Publisher('/cam0/image_raw', Image, queue_size=1)
@@ -27,21 +20,14 @@ def main():
     image_folder = os.path.join(dataset_path, 'mav0', 'cam0', 'data')
 
     image_files = read_images(image_folder)
-    
     rospy.loginfo("Dataset playback started...")
-
-    start_time = float(os.path.basename(image_files[0])[:-4]) / 1e9 
 
     for img_file in image_files:
         if rospy.is_shutdown():
             break
         
-        # Read and publish image
         img = cv2.imread(img_file, cv2.IMREAD_GRAYSCALE)
         img_msg = bridge.cv2_to_imgmsg(img, encoding="mono8")
-        current_time = float(os.path.basename(img_file)[:-4]) / 1e9  
-        img_msg.header.stamp = create_ros_time(current_time, start_time)
-        img_msg.header.frame_id = "camera"  
         image_pub.publish(img_msg)
 
         rospy.loginfo(f"Published image: {img_file}")

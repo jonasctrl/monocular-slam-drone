@@ -1,0 +1,34 @@
+{
+  "SettingsVersion": 1.2,
+  "DefaultVehicleConfig": "",
+  "SimMode": "Multirotor",
+  "RecordUIVisible": false,
+  "LogMessagesVisible": true,
+  "ViewMode": "",
+  "LocalHostIp": "127.0.0.1",
+  "ApiServerPort": 41451,
+  "RpcEnabled": true,
+  "Vehicles": {
+    "SimpleFlight": {
+      "VehicleType": "SimpleFlight",
+      "Cameras": {
+        "0": {
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 1280,
+              "Height": 720,
+              "FOV_Degrees": 90.0
+            }
+          ],
+          "X": 0.0,
+          "Y": 0.0,
+          "Z": 0.0,
+          "Pitch": 0.0,
+          "Roll": 0.0,
+          "Yaw": 0.0
+        }
+      }
+    }
+  }
+}

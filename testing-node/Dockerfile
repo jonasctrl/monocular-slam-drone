@@ -17,8 +17,6 @@ RUN mkdir -p /opt/ORB_SLAM3/Datasets/EuRoc && \
     mkdir MH01 && unzip MH_01_easy.zip -d MH01/ && \
     rm MH_01_easy.zip
 
-COPY ./scripts /opt/ORB_SLAM3/scripts
-
 ENTRYPOINT ["/ros_entrypoint.sh"]
 
-CMD ["bash", "-c", "source /opt/ros/${ROS_DISTRO}/setup.bash && python3 /opt/ORB_SLAM3/scripts/mono-image-stream.py"]
+CMD ["bash", "-c", "source /opt/ros/${ROS_DISTRO}/setup.bash && python3 /opt/scripts/mono-image-stream.py"]

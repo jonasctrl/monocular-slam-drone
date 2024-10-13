@@ -38,6 +38,21 @@ services:
     networks:
       ros_network:
         ipv4_address: 172.22.0.3
+
+  ros-airsim:
+    build:
+      context: ./airsim-node
+    container_name: ros-airsim-container
+    depends_on:
+      - ros-master
+    volumes:
+      - ./airsim-node/scripts:/opt/scripts
+    environment:
+      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_IP=172.22.0.7
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.7
     
   dummy:
     build:
@@ -45,6 +60,8 @@ services:
     container_name: ros-dummy-container
     depends_on:
       - ros-master
+    volumes:
+      - ./testing-node/scripts:/opt/scripts
     environment:
       - ROS_MASTER_URI=http://172.22.0.2:11311
       - ROS_IP=172.22.0.6
