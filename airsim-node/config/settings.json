@@ -18,7 +18,7 @@
               "ImageType": 0,
               "Width": 752,
               "Height": 480,
-              "FOV_Degrees": 90,
+              "FOV_Degrees": 60,
               "AutoExposureSpeed": 100,
               "MotionBlurAmount": 0
             }
