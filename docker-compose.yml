@@ -29,7 +29,7 @@ services:
       - ROS_IP=172.22.0.3
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - ./orb-slam3-node/ros-wrapper:/opt/catkin_ws/src/ros-wrapper
+      - ./orb-slam3-node/ros-wrapper/config/EuRoC.yaml:/opt/catkin_ws/src/ros-wrapper/config/EuRoC.yaml
     deploy:
       resources:
         reservations:
