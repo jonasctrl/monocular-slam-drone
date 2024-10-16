@@ -60,7 +60,7 @@ services:
   ros-octomap:
     build:
       context: ./octo-map-node
-    container_name: octo-map-node-container
+    container_name: ros-octo-map-container
     depends_on:
       - ros-master
     environment:

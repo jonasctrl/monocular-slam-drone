@@ -10,7 +10,7 @@
   </node>
 
   <!-- Launch RViz to visualize the OctoMap -->
-  <node pkg="rviz" type="rviz" name="rviz" args="-d /opt/catkin_ws/my_octomap_launch/rviz/visual.rviz" output="screen">
+  <node pkg="rviz" type="rviz" name="rviz" args="-d /opt/catkin_ws/octomap_launch/rviz/visual.rviz" output="screen">
   </node>
 </launch>
 
