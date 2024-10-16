@@ -8,12 +8,7 @@ This Python script connects to an AirSim simulation, retrieves camera intrinsics
    To calculate the focal lengths (`fx` and `fy`) based on the FOV and the image dimensions:
 
    - **Formula:**
-     \[
-     f_x = \frac{\text{width} / 2}{\tan(\text{FOV} / 2)}
-     \]
-     \[
-     f_y = \frac{\text{height} / 2}{\tan(\text{FOV} / 2)}
-     \]
+![alt text](/resources/image.png)
 
    - **Explanation**: The focal length can be calculated using the width (or height) of the image and the field of view angle. This is derived from the pinhole camera model, where the focal length is the distance from the camera center to the image plane.
 
@@ -26,12 +21,7 @@ This Python script connects to an AirSim simulation, retrieves camera intrinsics
    The principal points (`cx` and `cy`) are assumed to be at the center of the image:
 
    - **Formula:**
-     \[
-     c_x = \frac{\text{width}}{2}
-     \]
-     \[
-     c_y = \frac{\text{height}}{2}
-     \]
+![alt text](/resources/image-1.png)
 
    - **Explanation**: In a standard pinhole camera model, the principal point is generally at the center of the image. 
 
@@ -39,12 +29,7 @@ This Python script connects to an AirSim simulation, retrieves camera intrinsics
    To estimate the noise characteristics of the IMU’s gyroscope and accelerometer, the standard deviation is calculated for each axis (x, y, z) based on multiple samples.
 
    - **Formula**:
-     \[
-     \sigma_{\text{gyro\_axis}} = \text{std}([g_x, g_y, g_z])
-     \]
-     \[
-     \sigma_{\text{acc\_axis}} = \text{std}([a_x, a_y, a_z])
-     \]
+![alt text](/resources/image-2.png)
 
    - **Explanation**: The standard deviation of the samples from each axis (x, y, z) gives a measure of the noise level for the gyroscope and accelerometer.
 
