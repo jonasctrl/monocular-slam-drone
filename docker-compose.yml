@@ -3,7 +3,7 @@ version: "3.8"
 services:
   ros-master:
     build:
-      context: ./ros-master-node
+      context: ./master-node
     container_name: ros-master-container
     environment:
       - DISPLAY=${DISPLAY}
