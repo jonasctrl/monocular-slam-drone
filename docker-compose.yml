@@ -30,6 +30,8 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ./orb-slam3-node/ros-wrapper/config/EuRoC.yaml:/opt/catkin_ws/src/ros-wrapper/config/EuRoC.yaml
+      - ./orb-slam3-node/ros-wrapper/launch/euroc_mono.launch:/opt/catkin_ws/src/ros-wrapper/launch/euroc_mono.launch
+      - ./orb-slam3-node/ros-wrapper/launch/euroc_monoimu.launch:/opt/catkin_ws/src/ros-wrapper/launch/euroc_monoimu.launch
     deploy:
       resources:
         reservations:
