@@ -47,15 +47,6 @@ while True:
     client.moveToPositionAsync(home_x, home_y + 5, home_z, DELAY).join()
     client.moveToPositionAsync(home_x, home_y, home_z, DELAY).join()
 
-    # Perform 360 Degree Turn
-    airsim.wait_key('Press Enter to perform a 360-degree turn')
-    client.rotateByYawRateAsync(15, 6).join()  # 45 degrees per second for 8 seconds to complete 360 degrees
-    client.rotateByYawRateAsync(-15, 6).join()  # 45 degrees per second for 8 seconds to complete 360 degrees
-    
-    client.rotateByYawRateAsync(-15, 6).join()  # 45 degrees per second for 8 seconds to complete 360 degrees
-    client.rotateByYawRateAsync(-15, 6).join()  # 45 degrees per second for 8 seconds to complete 360 degrees
-    print("360-degree turn completed")
-
     # Return to home position and orientation
     client.moveToPositionAsync(home_x, home_y, home_z, DELAY).join()
     client.rotateToYawAsync(0).join()  # Returns to initial yaw (facing forward)

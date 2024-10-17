@@ -82,6 +82,21 @@ services:
       ros_network:
         ipv4_address: 172.22.0.8
 
+  ros-navigator:
+    build:
+      context: ./navigator-node
+    container_name: ros-navigator-container
+    depends_on:
+      - ros-master
+    volumes:
+      - ./navigator-node/scripts:/catkin_ws/src/scripts
+    environment:
+      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_IP=172.22.0.9
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.9
+
  # NOTE: For testing image processing node and other mock data streams
   #dummy:
   #  build:
