@@ -6,8 +6,8 @@ from sensor_msgs.msg import Image, Imu
 from cv_bridge import CvBridge
 import time
 
-TARGET_FPS = 20
 CAMERA = "front-center"
+RATE = 200  
 
 class AirSimDataPublisher:
     def __init__(self):
@@ -22,9 +22,8 @@ class AirSimDataPublisher:
         self.bridge = CvBridge()
         self.image_type = airsim.ImageType.Scene
 
-        self.start_time = time.time()
-
         self.seq = 0
+        self.start_time = time.time()
         self.frame_count = 0
 
     def publish_image(self):
@@ -70,36 +69,31 @@ class AirSimDataPublisher:
         imu_msg.angular_velocity_covariance = [-1] * 9
         imu_msg.linear_acceleration_covariance = [-1] * 9
         
-        print(imu_msg)
-    
         self.imu_pub.publish(imu_msg)
 
     def run(self):
-        rate = rospy.Rate(TARGET_FPS)
+        rate = rospy.Rate(RATE)
+        image_counter = 0
         
         while not rospy.is_shutdown():
-            loop_start = time.time()
-
-            self.publish_image()
             self.publish_imu()
             
+            if image_counter == 0:
+                self.publish_image()
+                
             self.frame_count += 1
             self.seq += 1
 
             elapsed_time = time.time() - self.start_time
             current_fps = self.frame_count / elapsed_time
 
-            print(
-                f"Iteration {self.seq}:"
-                f" Current FPS: {current_fps:.2f}"
-                f" Target FPS: {TARGET_FPS}"
-            )
+            if self.seq % RATE == 0:
+                print(
+                    f"Iteration {self.seq}:"
+                    f" Average FPS: {current_fps:.2f}"
+                )
 
-            processing_time = time.time() - loop_start
-            if processing_time < 1.0 / TARGET_FPS:
-                rate.sleep()
-            else:
-                rospy.logwarn(f"Frame {self.seq} took {processing_time:.4f}s, exceeding target frame time of {1.0/TARGET_FPS:.4f}s")
+            rate.sleep()
 
 if __name__ == '__main__':
     try:
