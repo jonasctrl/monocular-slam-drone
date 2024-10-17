@@ -2,11 +2,11 @@
 import airsim
 import rospy
 import numpy as np
-from sensor_msgs.msg import Image, Imu, NavSatFix, MagneticField, FluidPressure
+from sensor_msgs.msg import Image, Imu
 from cv_bridge import CvBridge
+import time
 
-ROS_RATE = 20
-
+TARGET_FPS = 20
 CAMERA = "front-center"
 
 class AirSimDataPublisher:
@@ -22,7 +22,10 @@ class AirSimDataPublisher:
         self.bridge = CvBridge()
         self.image_type = airsim.ImageType.Scene
 
+        self.start_time = time.time()
+
         self.seq = 0
+        self.frame_count = 0
 
     def publish_image(self):
         response = self.client.simGetImages([
@@ -46,7 +49,9 @@ class AirSimDataPublisher:
         imu_data = self.client.getImuData()
     
         imu_msg = Imu()
+        imu_msg.header.seq = self.seq
         imu_msg.header.stamp = rospy.Time.now()
+        imu_msg.header.frame_id = "camera"
         
         imu_msg.linear_acceleration.x = imu_data.linear_acceleration.x_val
         imu_msg.linear_acceleration.y = imu_data.linear_acceleration.y_val
@@ -61,37 +66,40 @@ class AirSimDataPublisher:
         imu_msg.orientation.y = imu_data.orientation.y_val
         imu_msg.orientation.z = imu_data.orientation.z_val
         
-        # Set covariance matrices (if unknown = -1)
-        imu_msg.orientation_covariance = [ -1, -1, -1,
-                                           -1, -1, -1,
-                                           -1, -1, -1 ]
+        imu_msg.orientation_covariance = [-1] * 9
+        imu_msg.angular_velocity_covariance = [-1] * 9
+        imu_msg.linear_acceleration_covariance = [-1] * 9
         
-        imu_msg.angular_velocity_covariance = [ -1, -1, -1,
-                                                -1, -1, -1,
-                                                -1, -1, -1 ]
-        
-        imu_msg.linear_acceleration_covariance = [ -1, -1, -1,
-                                                   -1, -1, -1,
-                                                   -1, -1, -1 ]
+        print(imu_msg)
     
         self.imu_pub.publish(imu_msg)
 
     def run(self):
-        rate = rospy.Rate(ROS_RATE)  
+        rate = rospy.Rate(TARGET_FPS)
         
         while not rospy.is_shutdown():
+            loop_start = time.time()
+
             self.publish_image()
             self.publish_imu()
             
-            print(
-                f"Published data for iteration {self.seq}:\n"
-                f"  - Image\n"
-                f"  - IMU\n"
-            )
-            
-            rate.sleep()
+            self.frame_count += 1
             self.seq += 1
 
+            elapsed_time = time.time() - self.start_time
+            current_fps = self.frame_count / elapsed_time
+
+            print(
+                f"Iteration {self.seq}:"
+                f" Current FPS: {current_fps:.2f}"
+                f" Target FPS: {TARGET_FPS}"
+            )
+
+            processing_time = time.time() - loop_start
+            if processing_time < 1.0 / TARGET_FPS:
+                rate.sleep()
+            else:
+                rospy.logwarn(f"Frame {self.seq} took {processing_time:.4f}s, exceeding target frame time of {1.0/TARGET_FPS:.4f}s")
 
 if __name__ == '__main__':
     try:
