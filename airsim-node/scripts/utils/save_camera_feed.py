@@ -10,7 +10,7 @@ client.confirmConnection()
 camera_name = "front-center"
 image_type = airsim.ImageType.Scene
 
-output_dir = "./data"
+output_dir = "../data"
 os.makedirs(output_dir, exist_ok=True)
 
 response = client.simGetImages([airsim.ImageRequest(camera_name, image_type, pixels_as_float=False, compress=False)])[0]
