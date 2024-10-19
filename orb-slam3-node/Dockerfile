@@ -103,6 +103,5 @@ RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && \
     cd /opt/catkin_ws && \
     catkin_make"
 
-# Launch the ORB-SLAM3 ROS wrapper
 WORKDIR /opt/catkin_ws/src
 CMD ["/bin/bash", "-c", "source /opt/catkin_ws/devel/setup.bash && roslaunch orb_slam3_ros_wrapper euroc_mono.launch"]
