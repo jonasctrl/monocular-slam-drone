@@ -1,5 +1,11 @@
 FROM ros:noetic-ros-core
 
+ENV DEBIAN_FRONTEND=noninteractive
+ENV DISPLAY=:0
+ENV QT_X11_NO_MITSHM=1
+ENV LANG C.UTF-8
+ENV GDK_BACKEND=x11
+
 # Install essential dependencies
 RUN apt-get update && \
     apt-get install -y \
