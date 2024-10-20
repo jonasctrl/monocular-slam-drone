@@ -367,10 +367,10 @@ def parse_airsim_data_v3(n_entries, n_skip):
 # resolution = 5.12
 # resolution = 2.56
 # resolution = 1.28
-# resolution = 0.64
+resolution = 0.64
 # resolution = 0.32
 # resolution = 0.16
-resolution = 0.08
+# resolution = 0.08
 # resolution = 0.04
 # resolution = 0.02
 # resolution = 0.01
@@ -395,9 +395,9 @@ goal = (283, 307, 102)
 # goal = (312, 289, 102)
 
 vmap = VoxArray(center, resolution, grid_shape, grid_st)
-# data_arr = parse_airsim_data_v3(img_end, img_skip)
+data_arr = parse_airsim_data_v3(img_end, img_skip)
 # data_arr = parse_airsim_data(img_end, img_skip)
-data_arr = parse_data(img_end, img_skip)
+# data_arr = parse_data(img_end, img_skip)
 for i in range(len(data_arr)):
     vmap.add_pcd_from_datapoint(data_arr[i])        
     
