@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="airsim_package" type="airsim_camera_xyz.py" name="airsim_camera_xyz" output="screen" launch-prefix="python3" />
+</launch>

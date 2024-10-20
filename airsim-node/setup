@@ -1,0 +1,6 @@
+setup:
+1. cd /catkin_ws/src/airsim_package
+2. source /catkin_ws/devel/setup.bash
+3. roslaunch airsim_package airsim_camera_xyz.launch
+
+cd /catkin_ws/src/airsim_package && source /catkin_ws/devel/setup.bash && roslaunch airsim_package airsim_camera_xyz.launch

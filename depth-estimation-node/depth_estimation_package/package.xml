@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>depth_estimation_package</name>
+  <version>0.0.1</version>
+  <description>Package to process rgb into depth image</description>
+  <maintainer email="user@example.com">Your Name</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Add std_msgs dependency here -->
+  <build_depend>std_msgs</build_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+  </export>
+</package>

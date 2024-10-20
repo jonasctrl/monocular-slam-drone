@@ -36,10 +36,10 @@ RUN pip3 install airsim
 RUN mkdir -p /catkin_ws/src
 WORKDIR /catkin_ws/src
 
+RUN git clone https://github.com/Mayankm96/airsim_ros_client.git
+
 RUN rosdep init && \
     rosdep update
-
-COPY ./airsim_package /catkin_ws/src/airsim_package
 
 WORKDIR /catkin_ws
 RUN rosdep install --from-paths src --ignore-src -r -y
@@ -49,9 +49,9 @@ RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && catkin_make"
 RUN echo "source /catkin_ws/devel/setup.bash" >> ~/.bashrc
 ENV ROS_PACKAGE_PATH=/catkin_ws/src
 
-COPY ./airsim_package/launch /catkin_ws/src/airsim_package/launch
+COPY ./scripts /opt/scripts
+WORKDIR /opt/scripts
 
-WORKDIR /catkin_ws/src/airsim_package
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
 
-# CMD ["/bin/bash", "-c", "source /catkin_ws/devel/setup.bash && roslaunch airsim_package airsim_camera_xyz.launch"]
 CMD ["sleep", "infinity"]

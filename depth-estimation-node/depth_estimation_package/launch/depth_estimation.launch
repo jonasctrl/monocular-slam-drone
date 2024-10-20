@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="depth_estimation_package" type="estimator.py" name="depth_estimation_node" output="screen" launch-prefix="python3" />
+</launch>
