@@ -17,7 +17,7 @@ class AirSimDatafeedNode:
         self.client.confirmConnection()
 
         self.rgb_pub = rospy.Publisher('/rgb_with_pose', RGBWithPose, queue_size=1)
-        self.depth_pub = rospy.Publisher('/depth_with_pose', DepthWithPose, queue_size=1)
+        self.depth_pub = rospy.Publisher('/ground_truth/depth_with_pose', DepthWithPose, queue_size=1)
 
         self.bridge = CvBridge()
         self.sequence = 0
