@@ -1,0 +1,5 @@
+<launch>
+  <!-- Launch RViz -->
+  <node pkg="rviz" type="rviz" name="rviz" args="-d /catkin_ws/src/nav/rviz/visual.rviz" output="screen">
+  </node>
+</launch>

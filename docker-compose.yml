@@ -56,6 +56,23 @@ services:
       ros_network:
         ipv4_address: 172.22.0.4
     
+  ros-mapper-nav:
+    build:
+      context: ./mapper-nav-node
+    container_name: ros-mapper-nav-container
+    depends_on:
+      - ros-master
+    volumes:
+      - ./mapper-nav-node/nav:/catkin_ws/src/nav
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_IP=172.22.0.5
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.5
+
 networks:
   ros_network:
     driver: bridge

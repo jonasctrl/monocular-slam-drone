@@ -3,7 +3,8 @@ import random
 import plotly.graph_objects as go
 from scipy.spatial.transform import Rotation as R
 
-from utils import bresenham3d_get_collision
+from utils import bresenham3d_get_collision, generate_z_axis_quaternions
+from mapper import VoxArray
 
 # Dimensions of the voxel map
 edge = 300
@@ -109,15 +110,44 @@ def get_cam_collisions(pos, quat, world=voxel_map):
 
 
 
+if __name__ == "__main__":
+    grid_st = np.array([0, 0, 0]).astype(int)
+    grid_shape = np.array([600, 600, 200]).astype(int)
+    center = np.array([grid_shape[0]//2, grid_shape[1]//2, 50]).astype(int)
+    resolution = 2.5
 
+    cam_qtrs = generate_z_axis_quaternions(12)
 
-voxel_map = generate_voxel_map_with_obstacles(edge, edge, height, num_obstacles=30)
+    env_map = generate_voxel_map_with_obstacles(edge, edge, height, num_obstacles=30)
+    vmap = VoxArray(center, resolution, grid_shape, grid_st)
+    
+    
+    path_len = 12
+    
+    cam_pos = [218,175,40]
+    cam_poses = path_len * cam_pos
+    # cam_qtr = [0,0,0,1]
+    cam_qtr = [0.939,-0.052,-0.296,0.116]
 
-cam_pos = [218,175,40]
-# cam_qtr = [0,0,0,1]
-cam_qtr = [0.939,-0.052,-0.296,0.116]
-cam_tgs, cam_coll = get_cam_collisions(cam_pos, cam_qtr, voxel_map)
-visualize_voxel_map(voxel_map, cam_targets=cam_tgs, cam_coll=cam_coll, camera=cam_pos)
+    cam_tgs = []
+    cam_col = []
+    for i in range(path_len):
+        ctg, col = get_cam_collisions(cam_pos, cam_qtr, env_map)
+        cam_tgs.append(ctg)
+        cam_col.append(col)
+
+    # cam_tgs, cam_coll = get_cam_collisions(cam_pos, cam_qtr, env_map)
+    # data_arr = parse_airsim_data_v3(img_end, img_skip)
+    # data_arr = parse_airsim_data(img_end, img_skip)
+    # data_arr = parse_data(img_end, img_skip)
+    # for i in range(len(data_arr)):
+        # vmap.add_pcd_from_datapoint(data_arr[i])        
+        
+    # vmap.navigate(start, goal)
+    # vmap.plot()
+    # vmap.plot(use_confidence=True)
+    
+    visualize_voxel_map(env_map, cam_targets=cam_tgs, cam_coll=cam_col, camera=cam_pos)
 
 
 
