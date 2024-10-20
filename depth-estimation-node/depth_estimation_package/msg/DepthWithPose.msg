@@ -1,0 +1,3 @@
+sensor_msgs/Image depth_image
+geometry_msgs/Point position
+geometry_msgs/Quaternion orientation

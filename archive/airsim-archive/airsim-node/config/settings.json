@@ -16,26 +16,8 @@
           "CaptureSettings": [
             {
               "ImageType": 0,
-              "Width": 256,
-              "Height": 144,
-              "FOV_Degrees": 60,
-              "AutoExposureSpeed": 100,
-              "MotionBlurAmount": 0
-            }
-          ],
-          "X": 0.0,
-          "Y": 0.0,
-          "Z": -0.3,
-          "Pitch": 0.0,
-          "Roll": 0.0,
-          "Yaw": 0.0
-        },
-        "depth-front-center": {
-          "CaptureSettings": [
-            {
-              "ImageType": 1,
-              "Width": 256,
-              "Height": 144,
+              "Width": 752,
+              "Height": 480,
               "FOV_Degrees": 60,
               "AutoExposureSpeed": 100,
               "MotionBlurAmount": 0

@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>airsim_package</name>
+  <version>0.0.1</version>
+  <description>Package for AirSim</description>
+  <maintainer email="user@example.com">Your Name</maintainer>
+  <license>BSD</license>
+
+  <!-- Build tools -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Dependencies -->
+  <build_depend>std_msgs</build_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <build_depend>geometry_msgs</build_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+
+  <build_depend>sensor_msgs</build_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+
+  <export>
+  </export>
+</package>

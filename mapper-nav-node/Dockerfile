@@ -1,11 +1,12 @@
 FROM ros:noetic-ros-core
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV DISPLAY=:0
+#ENV DISPLAY=:0
 ENV QT_X11_NO_MITSHM=1
 ENV LANG C.UTF-8
 ENV GDK_BACKEND=x11
 
+# Install essential dependencies
 RUN apt-get update && \
     apt-get install -y \
     python3-pip \
@@ -31,15 +32,30 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install msgpack-rpc-python
-RUN pip3 install airsim
+RUN pip3 install numpy scipy numpy-quaternion pandas Pillow
+RUN apt-get update && \
+    apt-get install -y \
+    ros-${ROS_DISTRO}-rviz\
+    && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /catkin_ws/src
+WORKDIR /catkin_ws
+
+RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && catkin_make'
+
 WORKDIR /catkin_ws/src
+RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash \
+     && catkin_create_pkg nav rospy nav_msgs std_msgs geometry_msgs'
+
+
+#RUN mkdir -p /catkin_ws/src/nav/scripts /catkin_ws/src/nav/launch /catkin_ws/src/nav/rviz
+#WORKDIR /catkin_ws
+#RUN catkin_make
+
+#WORKDIR /catkin_ws/src
 
 RUN rosdep init && \
     rosdep update
-
-COPY ./airsim_package /catkin_ws/src/airsim_package
 
 WORKDIR /catkin_ws
 RUN rosdep install --from-paths src --ignore-src -r -y
@@ -49,9 +65,12 @@ RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && catkin_make"
 RUN echo "source /catkin_ws/devel/setup.bash" >> ~/.bashrc
 ENV ROS_PACKAGE_PATH=/catkin_ws/src
 
-COPY ./airsim_package/launch /catkin_ws/src/airsim_package/launch
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
 
-WORKDIR /catkin_ws/src/airsim_package
+#CMD ["sleep", "infinity"]
+# Build the workspace
+RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && \
+    cd /catkin_ws && catkin_make"
 
-# CMD ["/bin/bash", "-c", "source /catkin_ws/devel/setup.bash && roslaunch airsim_package airsim_camera_xyz.launch"]
-CMD ["sleep", "infinity"]
+WORKDIR /catkin_ws/src
+CMD ["/bin/bash", "-c", "source /catkin_ws/devel/setup.bash && roslaunch nav mapper_nav.launch"]

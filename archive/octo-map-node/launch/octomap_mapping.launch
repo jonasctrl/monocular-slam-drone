@@ -1,0 +1,35 @@
+<launch>
+  <!-- Launch OctoMap Server Node -->
+  <node pkg="octomap_server" type="octomap_server_node" name="octomap_server" output="screen">
+    <!-- Remap cloud_in to the ORB_SLAM3 map points topic -->
+    <remap from="cloud_in" to="/orb_slam3/map_points" />
+    
+    <!-- Parameters for OctoMap -->
+    <param name="resolution" value="0.01" />
+    <param name="frame_id" value="world" /> <!-- World frame for OctoMap -->
+    
+    <!-- Enable publishing the 2D occupancy grid map -->
+    <param name="publish_2d_map" value="true" />
+    <param name="latch_2d_map" value="true" />
+    <param name="map_topic" value="octomap_2d_grid" />
+    
+    <!-- Enable publishing of the full 3D map in binary format -->
+    <param name="publish_full_map" value="true" />
+    <param name="binary_output" value="true" />
+    <param name="output_file" value="" /> <!-- Optionally specify a file for saving the map -->
+  </node>
+
+  <!-- Listen to the camera pose from ORB-SLAM3 and broadcast it as a transform -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="camera_pose_broadcaster" args="0 0 0 0 0 0 world camera_frame" />
+  
+  <!-- Subscribe to camera pose from ORB-SLAM3 and publish it as a transform -->
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="camera_pose_listener">
+    <!-- Remap the input to camera pose topic from ORB-SLAM3 -->
+    <remap from="/orb_slam3/camera_pose" to="/tf" />
+    <param name="publish_frequency" value="50" /> <!-- Ensure fast updates of camera pose -->
+  </node>
+
+  <!-- Launch RViz to visualize the OctoMap -->
+  <node pkg="rviz" type="rviz" name="rviz" args="-d /opt/catkin_ws/octomap_launch/rviz/visual.rviz" output="screen">
+  </node>
+</launch>

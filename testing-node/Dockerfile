@@ -2,8 +2,8 @@ FROM ros:noetic-ros-base
 
 RUN apt-get update && apt-get install -y \
     python3-pip \
-    ros-noetic-cv-bridge \
-    ros-noetic-tf \
+    ros-${ROS_DISTRO}-cv-bridge \
+    ros-${ROS_DISTRO}-tf \
     python3-opencv \
     wget \
     vim \

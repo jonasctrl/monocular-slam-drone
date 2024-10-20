@@ -1,0 +1,121 @@
+version: "3.8"
+
+services:
+  ros-master:
+    build:
+      context: ./master-node
+    container_name: ros-master-container
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_IP=172.22.0.2
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.2
+
+  orb-slam3:
+    build:
+      context: ./orb-slam3-node
+    container_name: ros-orb-slam3-container
+    depends_on:
+      - ros-master
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_IP=172.22.0.3
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./orb-slam3-node/ros-wrapper/config/EuRoC.yaml:/opt/catkin_ws/src/ros-wrapper/config/EuRoC.yaml
+      - ./orb-slam3-node/ros-wrapper/launch/euroc_mono.launch:/opt/catkin_ws/src/ros-wrapper/launch/euroc_mono.launch
+      - ./orb-slam3-node/ros-wrapper/launch/euroc_monoimu.launch:/opt/catkin_ws/src/ros-wrapper/launch/euroc_monoimu.launch
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              count: all
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.3
+
+  ros-airsim:
+    build:
+      context: ./airsim-node
+    container_name: ros-airsim-container
+    depends_on:
+      - ros-master
+    volumes:
+      - ./airsim-node/scripts:/opt/scripts
+    environment:
+      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_IP=172.22.0.7
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.7
+    
+  ros-octomap:
+    build:
+      context: ./octo-map-node
+    container_name: ros-octo-map-container
+    depends_on:
+      - ros-master
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_IP=172.22.0.8
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./octo-map-node/launch:/opt/catkin_ws/src/my_octomap_launch/launch/
+      - ./octo-map-node/rviz:/opt/catkin_ws/src/my_octomap_launch/rviz/
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              count: all
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.8
+
+  ros-navigator:
+    build:
+      context: archive/navigator-node
+    container_name: ros-navigator-container
+    depends_on:
+      - ros-master
+    volumes:
+      - ./navigator-node/scripts:/catkin_ws/src/scripts
+    environment:
+      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_IP=172.22.0.9
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.9
+
+ # NOTE: For testing image processing node and other mock data streams
+  #dummy:
+  #  build:
+  #    context: ./testing-node
+  #  container_name: ros-dummy-container
+  #  depends_on:
+  #    - ros-master
+  #  volumes:
+  #    - ./testing-node/scripts:/opt/scripts
+  #  environment:
+  #    - ROS_MASTER_URI=http://172.22.0.2:11311
+  #    - ROS_IP=172.22.0.6
+  #  networks:
+  #    ros_network:
+  #      ipv4_address: 172.22.0.6  
+
+networks:
+  ros_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
