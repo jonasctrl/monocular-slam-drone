@@ -114,7 +114,8 @@ def get_cam_collisions(pos, quat, world=voxel_map):
 voxel_map = generate_voxel_map_with_obstacles(edge, edge, height, num_obstacles=30)
 
 cam_pos = [218,175,40]
-cam_qtr = [0,0,0,1]
+# cam_qtr = [0,0,0,1]
+cam_qtr = [0.939,-0.052,-0.296,0.116]
 cam_tgs, cam_coll = get_cam_collisions(cam_pos, cam_qtr, voxel_map)
 visualize_voxel_map(voxel_map, cam_targets=cam_tgs, cam_coll=cam_coll, camera=cam_pos)
 

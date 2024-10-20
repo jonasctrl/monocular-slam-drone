@@ -3,7 +3,7 @@ import numpy as np
 from math import tan, pi
 
 
-def bresenham3d_get_collision(p1, p2, voxels, bounds):
+def bresenham3d_get_collision(p1, p2, voxels, bounds, empty_val=0):
     x1, y1, z1 = p1
     x2, y2, z2 = p2
 
@@ -24,7 +24,7 @@ def bresenham3d_get_collision(p1, p2, voxels, bounds):
         while x1 != x2:
             if x1<bounds[0][0] or x1>=bounds[0][1] or y1<bounds[1][0] or y1>=bounds[1][1] or z1<bounds[2][0] or z1>=bounds[2][1]: 
                 return None
-            if voxels[x1, y1, z1] > 0:
+            if voxels[x1, y1, z1] > empty_val:
                 return (x1, y1, z1)
             if err1 > 0:
                 y1 += sy
@@ -41,7 +41,7 @@ def bresenham3d_get_collision(p1, p2, voxels, bounds):
         while y1 != y2:
             if x1<bounds[0][0] or x1>=bounds[0][1] or y1<bounds[1][0] or y1>=bounds[1][1] or z1<bounds[2][0] or z1>=bounds[2][1]: 
                 return None
-            if voxels[x1, y1, z1] > 0:
+            if voxels[x1, y1, z1] > empty_val:
                 return (x1, y1, z1)
             if err1 > 0:
                 x1 += sx
@@ -58,7 +58,7 @@ def bresenham3d_get_collision(p1, p2, voxels, bounds):
         while z1 != z2:
             if x1<bounds[0][0] or x1>=bounds[0][1] or y1<bounds[1][0] or y1>=bounds[1][1] or z1<bounds[2][0] or z1>=bounds[2][1]: 
                 return None
-            if voxels[x1, y1, z1] > 0:
+            if voxels[x1, y1, z1] > empty_val:
                 return (x1, y1, z1)
             if err1 > 0:
                 x1 += sx
@@ -76,7 +76,7 @@ def bresenham3d_get_collision(p1, p2, voxels, bounds):
     
     # return voxels
 
-def bresenham3d_check_known_space(p1, p2, voxels):
+def bresenham3d_check_known_space(p1, p2, voxels, empty_val=0):
     """
     3D Bresenham's line algorithm to generate voxel coordinates along a straight line.
     
@@ -108,7 +108,7 @@ def bresenham3d_check_known_space(p1, p2, voxels):
         err2 = 2 * dz - dx
         while x1 != x2:
             # voxels.append((x1, y1, z1))
-            voxels[x1, y1, z1] = -1
+            voxels[x1, y1, z1] = empty_val
             if err1 > 0:
                 y1 += sy
                 err1 -= 2 * dx
@@ -123,7 +123,7 @@ def bresenham3d_check_known_space(p1, p2, voxels):
         err2 = 2 * dz - dy
         while y1 != y2:
             # voxels.append((x1, y1, z1))
-            voxels[x1, y1, z1] = -1
+            voxels[x1, y1, z1] = empty_val
             if err1 > 0:
                 x1 += sx
                 err1 -= 2 * dy
@@ -138,7 +138,7 @@ def bresenham3d_check_known_space(p1, p2, voxels):
         err2 = 2 * dy - dz
         while z1 != z2:
             # voxels.append((x1, y1, z1))
-            voxels[x1, y1, z1] = -1
+            voxels[x1, y1, z1] = empty_val
             if err1 > 0:
                 x1 += sx
                 err1 -= 2 * dz

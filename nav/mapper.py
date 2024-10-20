@@ -39,27 +39,34 @@ class VoxArray:
         self.res = resolution
         self.shp = grid_shape
         self.bgn = grid_start
-        self.vox = np.zeros(self.shp, dtype=np.int8)
+        self.vox = np.empty(self.shp, dtype=np.int8)
+        self.vox.fill(-1)
         self.cam_path = []
         self.nav_path = []
     
 
-    def plot(self):
+    def plot(self, show_empty_space=False, use_confidence=False):
         # Obstacles
         x, y, z = np.nonzero(self.vox > 0)
+
+        if use_confidence:
+            col_scale = [self.vox[xi, yi, zi] for xi, yi, zi in zip(x, y, z)]
+        else:
+            col_scale = z
         fig = go.Figure(data=[go.Scatter3d(x=x, y=y, z=z,
                                            mode='markers',
                                            marker=dict(size=6,
-                                                       color=z,
+                                                       color=col_scale,
                                                        colorscale='viridis',
                                                        # opacity=0.8
                                                        ),
                                            name='obst')])
 
-        # Empty space
-        # x, y, z = np.nonzero(self.vox < 0)
-        # fig = fig.add_trace(go.Scatter3d(x=x, y=y, z=z, mode='markers',
-                                           # marker=dict(size=1, color="blue"), name='known'))
+        if show_empty_space:
+            # Empty space
+            x, y, z = np.nonzero(self.vox < 0)
+            fig = fig.add_trace(go.Scatter3d(x=x, y=y, z=z, mode='markers',
+                                               marker=dict(size=1, color="blue"), name='known'))
 
 
         # Camera path
@@ -151,7 +158,12 @@ class VoxArray:
             # print(point)
             # coord = (point / self.res).astype(int) + self.cntr
             # coord_clp = np.clip(coord, self.bgn, self.shp-1)
-            self.vox[*point] = 1  # 1 for occupied
+            cur = self.vox[*point]
+            if cur == -1:
+                cur += 1
+            if cur < 127:
+                cur += 1
+            self.vox[*point] = cur
             
             bresenham3d_check_known_space(c[0], point, self.vox)
 
@@ -336,9 +348,9 @@ def parse_airsim_data_v3(n_entries, n_skip):
     seek = 0
     for i in range(seek, min(n_entries, len(metadata_list_sorted)), n_skip):
         v = metadata_list_sorted[i]
-        # img = v["gt_img"]
-        img = v["img"]
-        img = gaussian_filter(img, sigma=4.0)
+        img = v["gt_img"]
+        # img = v["img"]
+        # img = gaussian_filter(img, sigma=4.0)
 
         
         point_cloud = depth_img_to_pcd(img, skip, factor, fov=v["camera_fov"], max_depth=max_depth)
@@ -355,10 +367,10 @@ def parse_airsim_data_v3(n_entries, n_skip):
 # resolution = 5.12
 # resolution = 2.56
 # resolution = 1.28
-resolution = 0.64
+# resolution = 0.64
 # resolution = 0.32
 # resolution = 0.16
-# resolution = 0.08
+resolution = 0.08
 # resolution = 0.04
 # resolution = 0.02
 # resolution = 0.01
@@ -383,13 +395,14 @@ goal = (283, 307, 102)
 # goal = (312, 289, 102)
 
 vmap = VoxArray(center, resolution, grid_shape, grid_st)
-data_arr = parse_airsim_data_v3(img_end, img_skip)
+# data_arr = parse_airsim_data_v3(img_end, img_skip)
 # data_arr = parse_airsim_data(img_end, img_skip)
-# data_arr = parse_data(img_end, img_skip)
+data_arr = parse_data(img_end, img_skip)
 for i in range(len(data_arr)):
     vmap.add_pcd_from_datapoint(data_arr[i])        
     
 # vmap.navigate(start, goal)
-vmap.plot()
+# vmap.plot()
+vmap.plot(use_confidence=True)
 
 
