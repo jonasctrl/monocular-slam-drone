@@ -1,5 +1,6 @@
 
 import numpy as np
+from math import tan, pi
 
 
 def bresenham3d_get_collision(p1, p2, voxels, bounds):
@@ -153,15 +154,24 @@ def bresenham3d_check_known_space(p1, p2, voxels):
     
     # return voxels
 
-def depth_img_to_pcd(img, skip, fx, fy, cx, cy, factor):
+def depth_img_to_pcd(img, skip, factor, cam_params=None, fov=None, max_depth=float("inf")):
     height, width = img.shape
     point_cloud = []
+    if cam_params is not None:
+        (fx, fy, cx, cy) = cam_params
+    elif fov is not None:
+        fx = width / (2*tan(fov*pi/360))
+        fy = fx * height / width
+        cx = width / 2
+        cy = height / 2
+    else:
+        raise Exception("'cam_params' or 'fov' must be specified ")
 
     for v in range(1, height, skip):
         for u in range(1, width, skip):
             z = img[v, u] / factor  # Depth value (in meters or millimeters)
             # if z == 0:  # Skip pixels with no depth
-            if z == 0 or z > 30:  # Skip pixels with no depth
+            if z == 0 or z > max_depth:  # Skip pixels with no depth
                 continue
 
             # Convert (u, v, z) to (X, Y, Z)
