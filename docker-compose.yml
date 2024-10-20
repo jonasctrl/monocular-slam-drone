@@ -97,6 +97,24 @@ services:
       ros_network:
         ipv4_address: 172.22.0.9
 
+  ros-mapper-nav:
+    build:
+      context: ./mapper-nav-node
+    container_name: ros-mapper-nav-container
+    depends_on:
+      - ros-master
+    volumes:
+      - ./mapper-nav-node/nav:/catkin_ws/src/nav
+      #- ./mapper-nav-node/scripts/ros_node.py:/catkin_ws/src/scripts/ros_node.py
+      #- ./mapper-nav-node/launch/mapper_nav.launch:/catkin_ws/src/launch/mapper_nav.launch
+      #- ./mapper-nav-node/rviz/visual.rviz:/catkin_ws/src/rviz/visual.rviz
+    environment:
+      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_IP=172.22.0.10
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.10
+
  # NOTE: For testing image processing node and other mock data streams
   #dummy:
   #  build:

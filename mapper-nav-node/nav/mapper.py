@@ -2,14 +2,15 @@ import numpy as np
 # import pyquaternion
 from scipy.spatial.transform import Rotation as R
 from scipy.ndimage import gaussian_filter, zoom
-import open3d as o3d
-import plotly.graph_objects as go
-import cv2
+# import open3d as o3d
+# import plotly.graph_objects as go
+# import cv2
+import csv
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 import json
-import pandas as pd
+# import pandas as pd
 from PIL import Image
 import os
 # from math import tan, pi
@@ -31,7 +32,9 @@ class DataPoint:
         self.pos = np.array([tx, ty, tz])
         
         self.q_mod = R.from_quat(qmod)
-        self.qtr = R.from_quat([qx, qy, qz, qw])
+        self.qtr_cof = [qx, qy, qz, qw]
+        self.qtr = R.from_quat(self.qtr_cof)
+
 
 class VoxArray:
     def __init__(self, center, resolution, grid_shape, grid_start):
@@ -42,7 +45,12 @@ class VoxArray:
         self.vox = np.empty(self.shp, dtype=np.int8)
         self.vox.fill(-1)
         self.cam_path = []
+        self.cam_path_acc = []
+        self.cam_poses = []
         self.nav_path = []
+
+        self.data = []
+        self.data_idx = 0
     
 
     def plot(self, show_empty_space=False, use_confidence=False):
@@ -124,16 +132,26 @@ class VoxArray:
 
         fig.show()
         
+    def get_known_space_pcd(self):
+        x, y, z = np.nonzero(self.vox == 0)
+        pcd = np.array([x, y, z]).transpose()
+        return pcd
+        
+    def get_occupied_space_pcd(self):
+        x, y, z = np.nonzero(self.vox > 0)
+        pcd = np.array([x, y, z]).transpose()
+        return pcd
+
     def navigate(self, start, goal):
         self.nav_path = a_star_3d(self.vox, start, goal)
         print(f"found path={self.nav_path}")
 
         
-    def add_pcd(self, pcd_arr):
-        for point in pcd_arr:
-            coord = (point / self.res).astype(int) + self.cntr
-            coord_clp = np.clip(coord, self.bgn, self.shp-1)
-            self.vox[*coord_clp] = 1  # 1 for occupied
+    # def add_pcd(self, pcd_arr):
+        # for point in pcd_arr:
+            # coord = (point / self.res).astype(int) + self.cntr
+            # coord_clp = np.clip(coord, self.bgn, self.shp-1)
+            # self.vox[*coord_clp] = 1  # 1 for occupied
 
     def add_pcd_from_datapoint(self, dpt: DataPoint):
         if (len(dpt.pcd) == 0):
@@ -147,8 +165,12 @@ class VoxArray:
         pcd = pcd + dpt.pos
 
         c = (np.array([dpt.pos])/ self.res).astype(int) + self.cntr
+        c_acc = np.array([dpt.pos])/ self.res + self.cntr
         c = np.clip(c, self.bgn, self.shp-1)
         self.cam_path.append(c[0])
+
+        self.cam_path_acc.append(c_acc[0])
+        self.cam_poses.append(dpt.qtr_cof)
         
 
         coord = (pcd / self.res).astype(int) + self.cntr
@@ -158,41 +180,45 @@ class VoxArray:
             # print(point)
             # coord = (point / self.res).astype(int) + self.cntr
             # coord_clp = np.clip(coord, self.bgn, self.shp-1)
-            cur = self.vox[*point]
+            (x, y, z) = point
+            cur = self.vox[x, y, z]
             if cur == -1:
                 cur += 1
             if cur < 127:
                 cur += 1
-            self.vox[*point] = cur
+            self.vox[x, y, z] = cur
             
             bresenham3d_check_known_space(c[0], point, self.vox)
 
     
-    def add_pcd_from_file(self, file):
-        pcd = o3d.io.read_point_cloud(file)
-        points = np.asarray(pcd.points)
-        self.add_pcd(points)
+    # def add_pcd_from_file(self, file):
+        # pcd = o3d.io.read_point_cloud(file)
+        # points = np.asarray(pcd.points)
+        # self.add_pcd(points)
         
-        
-        
-def find_closest_timestamp(target_timestamp, groundtruth_df):
-    # Convert the timestamps to numpy array for vectorized operations
-    timestamps = groundtruth_df['timestamp'].values
+def find_closest_timestamp(target_timestamp, groundtruth_data):
+    # Extract the timestamps from groundtruth data for vectorized operations
+    timestamps = np.array([float(row['timestamp']) for row in groundtruth_data])
+    
     # Find the index of the closest timestamp
     closest_index = (np.abs(timestamps - target_timestamp)).argmin()
-    return groundtruth_df.iloc[closest_index]
-
+    
+    return groundtruth_data[closest_index]
+        
 def parse_data(n_entries, n_skip):
-    depth_df = pd.read_csv('data/rgbd/depth.csv')
-    groundtruth_df = pd.read_csv('data/rgbd/groundtruth.csv')
+    # Read depth.csv file
+    with open('data/rgbd/depth.csv', 'r') as depth_file:
+        depth_reader = csv.DictReader(depth_file)
+        depth_data = list(depth_reader)
+    
+    # Read groundtruth.csv file
+    with open('data/rgbd/groundtruth.csv', 'r') as gt_file:
+        gt_reader = csv.DictReader(gt_file)
+        groundtruth_data = list(gt_reader)
+
     results = []
-    
-    # Camera intrinsic parameters (you need to know these from your camera)
-    # fx = 525.0  # Focal length in x
-    # fy = 525.0  # Focal length in y
-    # cx = 319.5  # Principal point x
-    # cy = 239.5  # Principal point y
-    
+
+    # Camera intrinsic parameters (known from camera)
     fx = 517.3  # Focal length in x
     fy = 516.5  # Focal length in y
     cx = 318.6  # Principal point x
@@ -201,24 +227,77 @@ def parse_data(n_entries, n_skip):
     # skip = 30
     skip = 15
 
-
-    for i in range(0, min(n_entries, len(depth_df)), n_skip):
+    # Iterate through depth data
+    for i in range(0, min(n_entries, len(depth_data)), n_skip):
         # Read depth image filename and timestamp
-        timestamp = depth_df.iloc[i]['timestamp']
-        filename = depth_df.iloc[i]['filename']
+        timestamp = float(depth_data[i]['timestamp'])
+        filename = depth_data[i]['filename']
         
         print(f"image no. {i} {filename}")
         img = np.array(Image.open(f"data/rgbd/{filename}"))  # Open as grayscale
 
-        factor = 5000 # for the 16-bit PNG files
-        # factor = 1 # for the 32-bit float images in the ROS bag files
+        factor = 5000  # for the 16-bit PNG files
+        # factor = 1  # for the 32-bit float images in ROS bag files
 
+        # Generate the point cloud
         point_cloud = depth_img_to_pcd(img, skip, factor, cam_params=(fx, fy, cx, cy))
-        gt = find_closest_timestamp(timestamp, groundtruth_df)
         
-        results.append(DataPoint(point_cloud, gt['tx'], gt['ty'], gt['tz'], gt['qx'], gt['qy'], gt['qz'], gt['qw']))
+        # Find the closest ground truth data based on the timestamp
+        gt = find_closest_timestamp(timestamp, groundtruth_data)
+
+        # Create a DataPoint object with the point cloud and ground truth data
+        results.append(DataPoint(
+            point_cloud,
+            float(gt['tx']), float(gt['ty']), float(gt['tz']),
+            float(gt['qx']), float(gt['qy']), float(gt['qz']), float(gt['qw'])
+        ))
 
     return results
+        
+# def find_closest_timestamp(target_timestamp, groundtruth_df):
+    # # Convert the timestamps to numpy array for vectorized operations
+    # timestamps = groundtruth_df['timestamp'].values
+    # # Find the index of the closest timestamp
+    # closest_index = (np.abs(timestamps - target_timestamp)).argmin()
+    # return groundtruth_df.iloc[closest_index]
+
+# def parse_data(n_entries, n_skip):
+    # depth_df = pd.read_csv('data/rgbd/depth.csv')
+    # groundtruth_df = pd.read_csv('data/rgbd/groundtruth.csv')
+    # results = []
+    
+    # # Camera intrinsic parameters (you need to know these from your camera)
+    # # fx = 525.0  # Focal length in x
+    # # fy = 525.0  # Focal length in y
+    # # cx = 319.5  # Principal point x
+    # # cy = 239.5  # Principal point y
+    
+    # fx = 517.3  # Focal length in x
+    # fy = 516.5  # Focal length in y
+    # cx = 318.6  # Principal point x
+    # cy = 255.3  # Principal point y
+
+    # # skip = 30
+    # skip = 15
+
+
+    # for i in range(0, min(n_entries, len(depth_df)), n_skip):
+        # # Read depth image filename and timestamp
+        # timestamp = depth_df.iloc[i]['timestamp']
+        # filename = depth_df.iloc[i]['filename']
+        
+        # print(f"image no. {i} {filename}")
+        # img = np.array(Image.open(f"data/rgbd/{filename}"))  # Open as grayscale
+
+        # factor = 5000 # for the 16-bit PNG files
+        # # factor = 1 # for the 32-bit float images in the ROS bag files
+
+        # point_cloud = depth_img_to_pcd(img, skip, factor, cam_params=(fx, fy, cx, cy))
+        # gt = find_closest_timestamp(timestamp, groundtruth_df)
+        
+        # results.append(DataPoint(point_cloud, gt['tx'], gt['ty'], gt['tz'], gt['qx'], gt['qy'], gt['qz'], gt['qw']))
+
+    # return results
         
 
 def parse_airsim_data(n_entries, n_skip):
@@ -364,45 +443,62 @@ def parse_airsim_data_v3(n_entries, n_skip):
 
     return results
 
-# resolution = 5.12
-# resolution = 2.56
-# resolution = 1.28
-resolution = 0.64
-# resolution = 0.32
-# resolution = 0.16
-# resolution = 0.08
-# resolution = 0.04
-# resolution = 0.02
-# resolution = 0.01
+def mapper_start():
+    # resolution = 5.12
+    # resolution = 2.56
+    # resolution = 1.28
+    # resolution = 0.64
+    # resolution = 0.32
+    # resolution = 0.16
+    resolution = 0.08
+    # resolution = 0.04
+    # resolution = 0.02
+    # resolution = 0.01
 
-# img_skip = 20
-# img_skip = 10
-img_skip = 5
-# img_skip = 1
+    # img_skip = 20
+    # img_skip = 10
+    img_skip = 5
+    # img_skip = 1
 
-# img_end = 1
-# img_end = 10
-# img_end = 20
-# img_end = 50
-# img_end = 100
-# img_end = 200
-# img_end = 600
-img_end = 1200
-start = (322, 309, 104)
-goal = (283, 307, 102)
+    # img_end = 1
+    # img_end = 10
+    # img_end = 20
+    # img_end = 50
+    # img_end = 100
+    # img_end = 200
+    # img_end = 600
+    img_end = 1200
+    # start = (322, 309, 104)
+    # goal = (283, 307, 102)
 
-# start = (320, 281, 104)
-# goal = (312, 289, 102)
+    # start = (320, 281, 104)
+    # goal = (312, 289, 102)
 
-vmap = VoxArray(center, resolution, grid_shape, grid_st)
-data_arr = parse_airsim_data_v3(img_end, img_skip)
-# data_arr = parse_airsim_data(img_end, img_skip)
-# data_arr = parse_data(img_end, img_skip)
-for i in range(len(data_arr)):
-    vmap.add_pcd_from_datapoint(data_arr[i])        
+    vmap = VoxArray(center, resolution, grid_shape, grid_st)
+    # data_arr = parse_airsim_data_v3(img_end, img_skip)
+    # data_arr = parse_airsim_data(img_end, img_skip)
+    data_arr = parse_data(img_end, img_skip)
+    # for i in range(len(data_arr)):
+        # vmap.add_pcd_from_datapoint(data_arr[i])        
+
+    vmap.data = data_arr
+        
+    # vmap.navigate(start, goal)
+    # vmap.plot()
+    # vmap.plot(use_confidence=True)
+
+    return vmap
+
+
+def mapper_step(vmap):
+    if vmap.data_idx >= len(vmap.data):
+        print("End of Data")
+        return 
+
+    print(f"STEP {vmap.data_idx}")
+    vmap.add_pcd_from_datapoint(vmap.data[vmap.data_idx])        
+    vmap.data_idx += 1
+
+
+
     
-# vmap.navigate(start, goal)
-# vmap.plot()
-vmap.plot(use_confidence=True)
-
-
