@@ -24,6 +24,7 @@ services:
       - ros-master
     volumes:
       - ./airsim-node/airsim_package:/catkin_ws/src/airsim_package/
+      - ./airsim-node/utils:/catkin_ws/src/airsim_package/utils
     environment:
       - ROS_MASTER_URI=http://172.22.0.2:11311
       - ROS_IP=172.22.0.3
@@ -63,7 +64,13 @@ services:
     depends_on:
       - ros-master
     volumes:
-      - ./mapper-nav-node/nav:/catkin_ws/src/nav
+      - ./mapper-nav-node/nav/CMakeLists.txt:/catkin_ws/src/nav/CMakeLists.txt
+      - ./mapper-nav-node/nav/package.xml:/catkin_ws/src/nav/package.xml
+      - ./mapper-nav-node/nav/scripts:/catkin_ws/src/nav/scripts
+      - ./mapper-nav-node/nav/rviz:/catkin_ws/src/nav/rviz
+      - ./mapper-nav-node/nav/launch:/catkin_ws/src/nav/launch
+      - ./mapper-nav-node/nav/msg:/catkin_ws/src/nav/msg
+      - ./mapper-nav-node/nav/data:/catkin_ws/src/nav/data
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1

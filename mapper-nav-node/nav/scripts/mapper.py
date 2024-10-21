@@ -1,9 +1,7 @@
 import numpy as np
 # import pyquaternion
 from scipy.spatial.transform import Rotation as R
-from scipy.ndimage import gaussian_filter, zoom
-# import open3d as o3d
-# import plotly.graph_objects as go
+# from scipy.ndimage import gaussian_filter, zoom
 # import cv2
 import csv
 
@@ -18,30 +16,37 @@ import os
 from a_star import a_star_3d
 
 from utils import bresenham3d_check_known_space, depth_img_to_pcd
+import inspect
 
-grid_st = np.array([0, 0, 0]).astype(int)
 grid_shape = np.array([600, 600, 200]).astype(int)
-center = np.array([grid_shape[0]//2, grid_shape[1]//2, 50]).astype(int)
+# grid_st = np.array([0, 0, 0]).astype(int)
+# center = np.array([grid_shape[0]//2, grid_shape[1]//2, 50]).astype(int)
 
-
-
+def hit():
+    print(f"{inspect.currentframe().f_code.co_name}:{inspect.currentframe().f_lineno}")
 
 class DataPoint:
-    def __init__(self, pcd, tx, ty, tz, qx, qy, qz, qw, qmod=[0, 0, 0, 1]):
+    def __init__(self, pcd, pos, qtr=(0, 0, 0, 1), qmod=(0, 0, 0, 1)):
+        # (tx, ty, tz) = pos
+        # (qx, qy, qz, qw) = qtr
         self.pcd = np.array(pcd)
-        self.pos = np.array([tx, ty, tz])
-        
+        self.pos = np.array(pos)
+        self.qtr_cof = qtr
+
         self.q_mod = R.from_quat(qmod)
-        self.qtr_cof = [qx, qy, qz, qw]
+
         self.qtr = R.from_quat(self.qtr_cof)
 
 
 class VoxArray:
-    def __init__(self, center, resolution, grid_shape, grid_start):
-        self.cntr = center
+    def __init__(self, resolution=0.08, shape=[600, 600, 200]):
+        self.shp = np.array(shape).astype(int)
+        self.cntr = np.array([0.5*shape[0],
+                              0.5*shape[1],
+                              0.25*shape[2]]).astype(int)
+
         self.res = resolution
-        self.shp = grid_shape
-        self.bgn = grid_start
+        self.bgn = np.array([0, 0, 0]).astype(int)
         self.vox = np.empty(self.shp, dtype=np.int8)
         self.vox.fill(-1)
         self.cam_path = []
@@ -52,85 +57,6 @@ class VoxArray:
         self.data = []
         self.data_idx = 0
     
-
-    def plot(self, show_empty_space=False, use_confidence=False):
-        # Obstacles
-        x, y, z = np.nonzero(self.vox > 0)
-
-        if use_confidence:
-            col_scale = [self.vox[xi, yi, zi] for xi, yi, zi in zip(x, y, z)]
-        else:
-            col_scale = z
-        fig = go.Figure(data=[go.Scatter3d(x=x, y=y, z=z,
-                                           mode='markers',
-                                           marker=dict(size=6,
-                                                       color=col_scale,
-                                                       colorscale='viridis',
-                                                       # opacity=0.8
-                                                       ),
-                                           name='obst')])
-
-        if show_empty_space:
-            # Empty space
-            x, y, z = np.nonzero(self.vox < 0)
-            fig = fig.add_trace(go.Scatter3d(x=x, y=y, z=z, mode='markers',
-                                               marker=dict(size=1, color="blue"), name='known'))
-
-
-        # Camera path
-        px = [p[0] for p in self.cam_path]
-        py = [p[1] for p in self.cam_path]
-        pz = [p[2] for p in self.cam_path]
-
-        fig.add_trace(go.Scatter3d(
-            x=px,
-            y=py,
-            z=pz,
-            mode='lines',
-            line=dict(width=4, color='red'),  # Color and size for the new point
-            name='cam_path'
-        ))
-
-        fig.add_trace(go.Scatter3d(
-            x=px,
-            y=py,
-            z=pz,
-            mode='markers',
-            marker=dict(size=5, color='red'),  # Color and size for the new point
-            name='cam_path'
-        ))
-
-        # Navigation path
-        px = [p[0] for p in self.nav_path]
-        py = [p[1] for p in self.nav_path]
-        pz = [p[2] for p in self.nav_path]
-
-        fig.add_trace(go.Scatter3d(
-            x=px,
-            y=py,
-            z=pz,
-            mode='lines',
-            line=dict(width=6, color='yellow'),  # Color and size for the new point
-            name='nav_path'
-        ))
-
-        fig.add_trace(go.Scatter3d(
-            x=px,
-            y=py,
-            z=pz,
-            mode='markers',
-            marker=dict(size=5, color='yellow'),  # Color and size for the new point
-            name='cam_path'
-        ))
-
-        fig.update_layout(scene=dict(
-            # xaxis=dict(range=[grid_st[0], grid_shape[0]], title='x'),
-            # yaxis=dict(range=[grid_st[1], grid_shape[1]], title='y'),
-            # zaxis=dict(range=[grid_st[2], grid_shape[2]], title='z'),
-            aspectmode='data'
-        ))
-
-        fig.show()
         
     def get_known_space_pcd(self):
         x, y, z = np.nonzero(self.vox == 0)
@@ -147,31 +73,13 @@ class VoxArray:
         print(f"found path={self.nav_path}")
 
         
-    # def add_pcd(self, pcd_arr):
-        # for point in pcd_arr:
-            # coord = (point / self.res).astype(int) + self.cntr
-            # coord_clp = np.clip(coord, self.bgn, self.shp-1)
-            # self.vox[*coord_clp] = 1  # 1 for occupied
-
-    def add_pcd_from_datapoint(self, dpt: DataPoint):
-        if (len(dpt.pcd) == 0):
+    def add_pcd(self, pcd, cam_pt):
+        if len(pcd) == 0:
             return 
-        pcd = dpt.pcd
-        # rotate by given quaternion
-        pcd = dpt.q_mod.apply(pcd)
-        pcd = dpt.qtr.apply(pcd)
 
-        # translate
-        pcd = pcd + dpt.pos
+        cam_pt = np.array(cam_pt).astype(int)
 
-        c = (np.array([dpt.pos])/ self.res).astype(int) + self.cntr
-        c_acc = np.array([dpt.pos])/ self.res + self.cntr
-        c = np.clip(c, self.bgn, self.shp-1)
-        self.cam_path.append(c[0])
-
-        self.cam_path_acc.append(c_acc[0])
-        self.cam_poses.append(dpt.qtr_cof)
-        
+        pcd = np.array(pcd)
 
         coord = (pcd / self.res).astype(int) + self.cntr
         coord_clp = np.clip(coord, self.bgn, self.shp-1)
@@ -188,8 +96,33 @@ class VoxArray:
                 cur += 1
             self.vox[x, y, z] = cur
             
-            bresenham3d_check_known_space(c[0], point, self.vox)
+            bresenham3d_check_known_space(cam_pt, point, self.vox)
 
+    def add_pcd_from_datapoint(self, dpt: DataPoint):
+        if (len(dpt.pcd) == 0):
+            return 
+        pcd = dpt.pcd
+        # rotate by given quaternion
+        pcd = dpt.q_mod.apply(pcd)
+        pcd = dpt.qtr.apply(pcd)
+
+        # translate
+        pcd = pcd + dpt.pos
+
+        c = (np.array([dpt.pos])/ self.res).astype(int) + self.cntr
+        c_acc = np.array([dpt.pos])/ self.res + self.cntr
+        c = np.clip(c, self.bgn, self.shp-1).astype(int)
+        self.cam_path.append(c[0])
+
+        self.cam_path_acc.append(c_acc[0])
+        self.cam_poses.append(dpt.qtr_cof)
+        
+        self.add_pcd(pcd, c[0])
+
+    def add_pcd_from_depth_image(self, qtr, pos, img, stride, factor, cam_params=None, fov=None):
+        point_cloud = depth_img_to_pcd(img, stride, factor, cam_params=cam_params, fov=fov, max_depth=30)
+        dpt = DataPoint(point_cloud, pos, qtr)
+        self.add_pcd_from_datapoint(dpt)
     
     # def add_pcd_from_file(self, file):
         # pcd = o3d.io.read_point_cloud(file)
@@ -248,57 +181,10 @@ def parse_data(n_entries, n_skip):
         # Create a DataPoint object with the point cloud and ground truth data
         results.append(DataPoint(
             point_cloud,
-            float(gt['tx']), float(gt['ty']), float(gt['tz']),
-            float(gt['qx']), float(gt['qy']), float(gt['qz']), float(gt['qw'])
-        ))
+            (float(gt['tx']), float(gt['ty']), float(gt['tz'])),
+            (float(gt['qx']), float(gt['qy']), float(gt['qz']), float(gt['qw']))))
 
     return results
-        
-# def find_closest_timestamp(target_timestamp, groundtruth_df):
-    # # Convert the timestamps to numpy array for vectorized operations
-    # timestamps = groundtruth_df['timestamp'].values
-    # # Find the index of the closest timestamp
-    # closest_index = (np.abs(timestamps - target_timestamp)).argmin()
-    # return groundtruth_df.iloc[closest_index]
-
-# def parse_data(n_entries, n_skip):
-    # depth_df = pd.read_csv('data/rgbd/depth.csv')
-    # groundtruth_df = pd.read_csv('data/rgbd/groundtruth.csv')
-    # results = []
-    
-    # # Camera intrinsic parameters (you need to know these from your camera)
-    # # fx = 525.0  # Focal length in x
-    # # fy = 525.0  # Focal length in y
-    # # cx = 319.5  # Principal point x
-    # # cy = 239.5  # Principal point y
-    
-    # fx = 517.3  # Focal length in x
-    # fy = 516.5  # Focal length in y
-    # cx = 318.6  # Principal point x
-    # cy = 255.3  # Principal point y
-
-    # # skip = 30
-    # skip = 15
-
-
-    # for i in range(0, min(n_entries, len(depth_df)), n_skip):
-        # # Read depth image filename and timestamp
-        # timestamp = depth_df.iloc[i]['timestamp']
-        # filename = depth_df.iloc[i]['filename']
-        
-        # print(f"image no. {i} {filename}")
-        # img = np.array(Image.open(f"data/rgbd/{filename}"))  # Open as grayscale
-
-        # factor = 5000 # for the 16-bit PNG files
-        # # factor = 1 # for the 32-bit float images in the ROS bag files
-
-        # point_cloud = depth_img_to_pcd(img, skip, factor, cam_params=(fx, fy, cx, cy))
-        # gt = find_closest_timestamp(timestamp, groundtruth_df)
-        
-        # results.append(DataPoint(point_cloud, gt['tx'], gt['ty'], gt['tz'], gt['qx'], gt['qy'], gt['qz'], gt['qw']))
-
-    # return results
-        
 
 def parse_airsim_data(n_entries, n_skip):
     data_dir = "data"
@@ -351,7 +237,8 @@ def parse_airsim_data(n_entries, n_skip):
         ori = tl['orientation']
         
         # results.append(DataPoint(point_cloud, pos['y'], pos['x'], -pos['z'], ori['y'], ori['x'], -ori['z'], ori['w']))
-        results.append(DataPoint(point_cloud, pos['y'], pos['x'], pos['z'], ori['x'], ori['y'], ori['z'], ori['w']))
+        results.append(DataPoint(point_cloud, (pos['y'], pos['x'], pos['z']),
+                                 (ori['x'], ori['y'], ori['z'], ori['w'])))
 
     return results
 
@@ -438,66 +325,12 @@ def parse_airsim_data_v3(n_entries, n_skip):
         pos = v['camera_position']
         ori = v['camera_orientation']
         
-        results.append(DataPoint(point_cloud, pos['y'], pos['x'], -pos['z'], ori['y'], ori['x'], -ori['z'], ori['w'], qmod=[-0.7071, 0, 0, 0.7071]))
-        # results.append(DataPoint(point_cloud, pos['y'], pos['x'], pos['z'], ori['x'], ori['y'], ori['z'], ori['w']))
+        results.append(DataPoint(point_cloud, (pos['y'], pos['x'], -pos['z']),
+                                 (ori['y'], ori['x'], -ori['z'], ori['w'])
+                                 , qmod=[-0.7071, 0, 0, 0.7071]))
 
     return results
 
-def mapper_start():
-    # resolution = 5.12
-    # resolution = 2.56
-    # resolution = 1.28
-    # resolution = 0.64
-    # resolution = 0.32
-    # resolution = 0.16
-    resolution = 0.08
-    # resolution = 0.04
-    # resolution = 0.02
-    # resolution = 0.01
-
-    # img_skip = 20
-    # img_skip = 10
-    img_skip = 5
-    # img_skip = 1
-
-    # img_end = 1
-    # img_end = 10
-    # img_end = 20
-    # img_end = 50
-    # img_end = 100
-    # img_end = 200
-    # img_end = 600
-    img_end = 1200
-    # start = (322, 309, 104)
-    # goal = (283, 307, 102)
-
-    # start = (320, 281, 104)
-    # goal = (312, 289, 102)
-
-    vmap = VoxArray(center, resolution, grid_shape, grid_st)
-    # data_arr = parse_airsim_data_v3(img_end, img_skip)
-    # data_arr = parse_airsim_data(img_end, img_skip)
-    data_arr = parse_data(img_end, img_skip)
-    # for i in range(len(data_arr)):
-        # vmap.add_pcd_from_datapoint(data_arr[i])        
-
-    vmap.data = data_arr
-        
-    # vmap.navigate(start, goal)
-    # vmap.plot()
-    # vmap.plot(use_confidence=True)
-
-    return vmap
-
-
-def mapper_step(vmap):
-    if vmap.data_idx >= len(vmap.data):
-        print("End of Data")
-        return 
-
-    print(f"STEP {vmap.data_idx}")
-    vmap.add_pcd_from_datapoint(vmap.data[vmap.data_idx])        
-    vmap.data_idx += 1
 
 
 
