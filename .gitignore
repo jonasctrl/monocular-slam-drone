@@ -37,3 +37,6 @@
 
 # Git ignore .env
 .env
+
+# ignore __pycache__ 
+__pycache__/
