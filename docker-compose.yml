@@ -55,6 +55,34 @@ services:
     networks:
       ros_network:
         ipv4_address: 172.22.0.4
+
+  orb-slam3:
+    build:
+      context: ./orb-slam3-node
+    container_name: ros-orb-slam3-container
+    depends_on:
+      - ros-master
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_IP=172.22.0.5
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./orb-slam3-node/ros-wrapper/config/EuRoC.yaml:/opt/catkin_ws/src/ros-wrapper/config/EuRoC.yaml
+      - ./orb-slam3-node/ros-wrapper/launch/euroc_mono.launch:/opt/catkin_ws/src/ros-wrapper/launch/euroc_mono.launch
+      - ./orb-slam3-node/ros-wrapper/launch/euroc_monoimu.launch:/opt/catkin_ws/src/ros-wrapper/launch/euroc_monoimu.launch
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    runtime: nvidia
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.5
     
   ros-mapper-nav:
     build:
@@ -68,10 +96,10 @@ services:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
       - ROS_MASTER_URI=http://172.22.0.2:11311
-      - ROS_IP=172.22.0.5
+      - ROS_IP=172.22.0.6
     networks:
       ros_network:
-        ipv4_address: 172.22.0.5
+        ipv4_address: 172.22.0.6
 
 networks:
   ros_network:

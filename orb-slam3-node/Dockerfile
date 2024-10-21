@@ -90,7 +90,7 @@ RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
 # Set up the ROS workspace
 RUN mkdir -p /opt/catkin_ws/src
 COPY ros-wrapper /opt/catkin_ws/src/ros-wrapper
-RUN cp -r /opt/orb_slam3/ORB_SLAM3/Vocabulary/ORBvoc.txt /opt/catkin_ws/src/orb_slam3_package/config/ORBvoc.txt
+RUN cp -r /opt/orb_slam3/ORB_SLAM3/Vocabulary/ORBvoc.txt /opt/catkin_ws/src/ros-wrapper/config/ORBvoc.txt
 
 # Install necessary dependencies for the ROS wrapper
 RUN apt-get update && \
@@ -104,4 +104,4 @@ RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && \
     catkin_make"
 
 WORKDIR /opt/catkin_ws/src
-CMD ["/bin/bash", "-c", "source /opt/catkin_ws/devel/setup.bash && roslaunch orb_slam3_package euroc_monoimu.launch"]
+CMD ["/bin/bash", "-c", "source /opt/catkin_ws/devel/setup.bash && roslaunch orb_slam3_ros_wrapper euroc_monoimu.launch"]

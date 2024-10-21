@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(orb_slam3_package)
+project(orb_slam3_ros_wrapper)
 
 set(ORB_SLAM3_DIR
    /opt/orb_slam3/ORB_SLAM3

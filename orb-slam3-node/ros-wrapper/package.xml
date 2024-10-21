@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-    <name>orb_slam3_package</name>
+    <name>orb_slam3_ros_wrapper</name>
     <version>1.0.0</version>
     <description>ROS wrapper for ORB SLAM3</description>
 

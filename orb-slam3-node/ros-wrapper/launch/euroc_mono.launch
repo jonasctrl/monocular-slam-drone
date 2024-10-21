@@ -1,5 +1,5 @@
 <launch>
-    <node name="orb_slam3_mono" pkg="orb_slam3_package" type="orb_slam3_ros_wrapper_mono" output="screen">
+    <node name="orb_slam3_mono" pkg="orb_slam3_ros_wrapper" type="orb_slam3_ros_wrapper_mono" output="screen">
         <!-- for EuRoC dataset -->
         <remap from="/camera/image_raw" to="/cam0/image_raw"/>
 

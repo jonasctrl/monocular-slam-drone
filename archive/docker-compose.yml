@@ -29,9 +29,9 @@ services:
       - ROS_IP=172.22.0.3
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - ./orb-slam3-node/ros-wrapper/config/EuRoC.yaml:/opt/catkin_ws/src/ros-wrapper/config/EuRoC.yaml
-      - ./orb-slam3-node/ros-wrapper/launch/euroc_mono.launch:/opt/catkin_ws/src/ros-wrapper/launch/euroc_mono.launch
-      - ./orb-slam3-node/ros-wrapper/launch/euroc_monoimu.launch:/opt/catkin_ws/src/ros-wrapper/launch/euroc_monoimu.launch
+      - ./orb-slam3-node/orb_slam3_package/config/EuRoC.yaml:/opt/catkin_ws/src/orb_slam3_package/config/EuRoC.yaml
+      - ./orb-slam3-node/orb_slam3_package/launch/euroc_mono.launch:/opt/catkin_ws/src/orb_slam3_package/launch/euroc_mono.launch
+      - ./orb-slam3-node/orb_slam3_package/launch/euroc_monoimu.launch:/opt/catkin_ws/src/orb_slam3_package/launch/euroc_monoimu.launch
     deploy:
       resources:
         reservations:
