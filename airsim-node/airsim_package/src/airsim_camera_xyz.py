@@ -23,7 +23,7 @@ class AirSimDatafeedNode:
         self.sequence = 0
 
     def get_camera_info(self):
-        camera_info = self.client.simGetCameraInfo(CAMERA, "")
+        camera_info = self.client.simGetCameraInfo(CAMERA)
         position = Point()
         orientation = Quaternion()
 
