@@ -3,14 +3,23 @@ import numpy as np
 from math import tan, pi
 import sys, os
 from scipy.spatial.transform import Rotation as R
+import nav_config as cfg
+
+def in_bounds(voxels, x, y, z):
+    s=voxels.shape
+    return 0 <= x < s[0] and 0 <= y < s[1] and 0 <= z < s[2] 
+
+def clamp(v, a, b):
+    if v < a:
+        return a
+    if v > b:
+        return b
+    return v
 
 
-def bresenham3d_get_collision(p1, p2, voxels, empty_val=0):
+def bresenham3d_raycast(p1, p2, voxels):
     x1, y1, z1 = p1
     x2, y2, z2 = p2
-
-    shp = voxels.shape
-    bounds = [(0, shp[0]), (0, shp[1]), (0, shp[2])]
 
     # Compute deltas
     dx = abs(x2 - x1)
@@ -21,16 +30,16 @@ def bresenham3d_get_collision(p1, p2, voxels, empty_val=0):
     sx = 1 if x2 > x1 else -1
     sy = 1 if y2 > y1 else -1
     sz = 1 if z2 > z1 else -1
+
+    path = []
     
     # Initialize error terms
     if dx >= dy and dx >= dz:  # X is dominant
         err1 = 2 * dy - dx
         err2 = 2 * dz - dx
-        while x1 != x2:
-            if x1<bounds[0][0] or x1>=bounds[0][1] or y1<bounds[1][0] or y1>=bounds[1][1] or z1<bounds[2][0] or z1>=bounds[2][1]: 
-                return None
-            if voxels[x1, y1, z1] > empty_val:
-                return (x1, y1, z1)
+        while x1 != x2 and in_bounds(voxels, x1, y1, z1):
+            path.append((x1, y1, z1, voxels[x1, y1, z1]))
+            # voxels[x1, y1, z1] = empty_val
             if err1 > 0:
                 y1 += sy
                 err1 -= 2 * dx
@@ -43,11 +52,10 @@ def bresenham3d_get_collision(p1, p2, voxels, empty_val=0):
     elif dy >= dx and dy >= dz:  # Y is dominant
         err1 = 2 * dx - dy
         err2 = 2 * dz - dy
-        while y1 != y2:
-            if x1<bounds[0][0] or x1>=bounds[0][1] or y1<bounds[1][0] or y1>=bounds[1][1] or z1<bounds[2][0] or z1>=bounds[2][1]: 
-                return None
-            if voxels[x1, y1, z1] > empty_val:
-                return (x1, y1, z1)
+        while y1 != y2 and in_bounds(voxels, x1, y1, z1): 
+            # path.append((x1, y1, z1))
+            path.append((x1, y1, z1, voxels[x1, y1, z1]))
+            # voxels[x1, y1, z1] = empty_val
             if err1 > 0:
                 x1 += sx
                 err1 -= 2 * dy
@@ -60,11 +68,10 @@ def bresenham3d_get_collision(p1, p2, voxels, empty_val=0):
     else:  # Z is dominant
         err1 = 2 * dx - dz
         err2 = 2 * dy - dz
-        while z1 != z2:
-            if x1<bounds[0][0] or x1>=bounds[0][1] or y1<bounds[1][0] or y1>=bounds[1][1] or z1<bounds[2][0] or z1>=bounds[2][1]: 
-                return None
-            if voxels[x1, y1, z1] > empty_val:
-                return (x1, y1, z1)
+        while z1 != z2 and in_bounds(voxels, x1, y1, z1):
+            # path.append((x1, y1, z1))
+            path.append((x1, y1, z1, voxels[x1, y1, z1]))
+            # voxels[x1, y1, z1] = empty_val
             if err1 > 0:
                 x1 += sx
                 err1 -= 2 * dz
@@ -74,105 +81,11 @@ def bresenham3d_get_collision(p1, p2, voxels, empty_val=0):
             err1 += 2 * dx
             err2 += 2 * dy
             z1 += sz
-    
-    return None
+
+    return path
+
     # Add the final voxel (end point)
     # voxels.append((x2, y2, z2))
-    
-    # return voxels
-
-def bresenham3d_check_known_space(p1, p2, voxels, empty_val=0):
-    """
-    3D Bresenham's line algorithm to generate voxel coordinates along a straight line.
-    
-    Parameters:
-    - p1: tuple of (x1, y1, z1) representing the first point
-    - p2: tuple of (x2, y2, z2) representing the second point
-    
-    Returns:
-    - List of tuples representing the coordinates of voxels along the line.
-    """
-    x1, y1, z1 = p1
-    x2, y2, z2 = p2
-
-    shp = voxels.shape
-    bounds = [(0, shp[0]), (0, shp[1]), (0, shp[2])]
-
-    # Compute deltas
-    dx = abs(x2 - x1)
-    dy = abs(y2 - y1)
-    dz = abs(z2 - z1)
-    
-    # Determine the direction of the steps
-    sx = 1 if x2 > x1 else -1
-    sy = 1 if y2 > y1 else -1
-    sz = 1 if z2 > z1 else -1
-    
-    try:
-        # Initialize error terms
-        if dx >= dy and dx >= dz:  # X is dominant
-            err1 = 2 * dy - dx
-            err2 = 2 * dz - dx
-            while x1 != x2:
-                # voxels.append((x1, y1, z1))
-                if x1<bounds[0][0] or x1>=bounds[0][1] or y1<bounds[1][0] or y1>=bounds[1][1] or z1<bounds[2][0] or z1>=bounds[2][1]: 
-                    break
-                voxels[x1, y1, z1] = empty_val
-                if err1 > 0:
-                    y1 += sy
-                    err1 -= 2 * dx
-                if err2 > 0:
-                    z1 += sz
-                    err2 -= 2 * dx
-                err1 += 2 * dy
-                err2 += 2 * dz
-                x1 += sx
-        elif dy >= dx and dy >= dz:  # Y is dominant
-            err1 = 2 * dx - dy
-            err2 = 2 * dz - dy
-            while y1 != y2:
-                # voxels.append((x1, y1, z1))
-                if x1<bounds[0][0] or x1>=bounds[0][1] or y1<bounds[1][0] or y1>=bounds[1][1] or z1<bounds[2][0] or z1>=bounds[2][1]: 
-                    break
-                voxels[x1, y1, z1] = empty_val
-                if err1 > 0:
-                    x1 += sx
-                    err1 -= 2 * dy
-                if err2 > 0:
-                    z1 += sz
-                    err2 -= 2 * dy
-                err1 += 2 * dx
-                err2 += 2 * dz
-                y1 += sy
-        else:  # Z is dominant
-            err1 = 2 * dx - dz
-            err2 = 2 * dy - dz
-            while z1 != z2:
-                # voxels.append((x1, y1, z1))
-                if x1<bounds[0][0] or x1>=bounds[0][1] or y1<bounds[1][0] or y1>=bounds[1][1] or z1<bounds[2][0] or z1>=bounds[2][1]: 
-                    break
-                voxels[x1, y1, z1] = empty_val
-                if err1 > 0:
-                    x1 += sx
-                    err1 -= 2 * dz
-                if err2 > 0:
-                    y1 += sy
-                    err2 -= 2 * dz
-                err1 += 2 * dx
-                err2 += 2 * dy
-                z1 += sz
-    except Exception as e:
-        exc_type, _ , exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        # print(exc_type, fname, exc_tb.tb_lineno)
-        print(f"ERROR: {exc_type} {fname} {exc_tb.tb_lineno}")
-        print(f"indexes:{(x1, y1, z1)}")
-        raise e
-    
-    # Add the final voxel (end point)
-    # voxels.append((x2, y2, z2))
-    
-    # return voxels
 
 def depth_img_to_pcd(img, skip, factor, cam_params=None, fov=None, max_depth=float("inf")):
     height, width = img.shape

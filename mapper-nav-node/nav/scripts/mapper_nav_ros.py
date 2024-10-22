@@ -16,6 +16,8 @@ from scipy.spatial.transform import Rotation as R
 from mapper import VoxArray 
 import sys, os
 
+import nav_config as cfg
+
 GUI = False
 
 def print_exception(ex):
@@ -33,8 +35,8 @@ def pointcloud2_to_array(msg):
 
 class MapperNavNode:
     def __init__(self):
-        resolution = 2
-        self.vmap = VoxArray(resolution=resolution, shape=[600,600,300])
+        # resolution = 3.2
+        self.vmap = VoxArray(resolution=cfg.map_resolution, shape=[600,600,300])
         rospy.init_node('mapper_nav', anonymous=True)
 
         self.bridge = CvBridge()

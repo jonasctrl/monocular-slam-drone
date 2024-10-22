@@ -5,15 +5,12 @@ import random
 from scipy.spatial.transform import Rotation as R
 from a_star import a_star_3d
 
-from utils import bresenham3d_get_collision, quaternion_from_two_vectors
+from utils import bresenham3d_raycast, quaternion_from_two_vectors
 # from utils import bresenham3d_check_known_space, depth_img_to_pcd
 
-cam_w = 12
-cam_h = 8
-cam_depth = 6
-cam_scaling = 12
+import nav_config as cfg
 
-def_cam_target_pts = np.array([(cam_depth, w - cam_w / 2, h - cam_h / 2) for w in range(cam_w) for h in range(cam_h)])
+def_cam_target_pts = np.array([(cfg.cam_depth, w - cfg.cam_w / 2, h - cfg.cam_h / 2) for w in range(cfg.cam_w) for h in range(cfg.cam_h)])
 def_cam_pos = [0,0,0]
 
 class Maze(object):
@@ -37,7 +34,7 @@ class Maze(object):
         # goal = (200, 200, 10)
         # goal = (60,50,20)
         # goal = (40,60,4)
-        goal = (112,90,30)
+        goal = (100,90,10)
         start = tuple(self.cur_pos)
         print(f"searching path from {start} to {goal}")
         nav_path = a_star_3d(self.env_map, start, goal)
@@ -49,10 +46,8 @@ class Maze(object):
             p1 = np.array(nav_path[i])
             p2 = np.array(nav_path[i+1])
             p_diff = p2 - p1
-            # print(f"diff={p_diff}")
             qtr = quaternion_from_two_vectors(np.array([1, 0, 0]), p_diff)
             # qtr = quaternion_from_two_vectors(np.array([1, 0, 0]), p_diff)
-            print(f"got qtr={qtr}")
             nav_qtrs.append(qtr)
         
         
@@ -127,7 +122,7 @@ class Maze(object):
         pos = np.array(self.cur_pos)
         
         cam_targets = def_cam_target_pts.copy()
-        cam_targets = cam_scaling * cam_targets
+        cam_targets = cfg.cam_scaling * cam_targets
         cam_targets = qtr.apply(cam_targets)
         cam_targets = pos + cam_targets
         cam_targets = cam_targets.astype(int)
@@ -136,9 +131,12 @@ class Maze(object):
         
         # print(f"cam_targets:{cam_targets}")
         for ctg in cam_targets:
-            col = bresenham3d_get_collision(pos, ctg, self.env_map)
-            if col is not None:
-                collided.append(col)
+            # col = bresenham3d_raycast(pos, ctg, self.env_map, get_collision=True, update_unkn=False)
+            cols = bresenham3d_raycast(pos, ctg, self.env_map)
+            cols = [(x, y, z) for (x, y, z, v) in cols if v != 0]
+            if len(cols) > 0:
+                collided.append(cols[0])
+
 
         self.cam_targets = cam_targets
         self.glob_pcd = np.array(collided)
