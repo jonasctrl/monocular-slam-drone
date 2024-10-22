@@ -19,6 +19,7 @@ RUN apt-get update && \
     ros-${ROS_DISTRO}-camera-info-manager \
     ros-${ROS_DISTRO}-roslint \
     ros-${ROS_DISTRO}-rosbash \
+    ros-${ROS_DISTRO}-rviz \
     python3-catkin-tools \
     libgl1-mesa-glx \
     git \
