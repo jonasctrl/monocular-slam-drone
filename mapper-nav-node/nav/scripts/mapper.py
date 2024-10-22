@@ -96,7 +96,7 @@ class VoxArray:
                 cur += 1
             self.vox[x, y, z] = cur
             
-            bresenham3d_check_known_space(cam_pt, point, self.vox)
+            # bresenham3d_check_known_space(cam_pt, point, self.vox)
 
     def add_pcd_from_datapoint(self, dpt: DataPoint):
         if (len(dpt.pcd) == 0):

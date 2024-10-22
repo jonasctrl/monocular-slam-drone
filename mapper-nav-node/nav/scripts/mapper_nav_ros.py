@@ -33,7 +33,7 @@ def pointcloud2_to_array(msg):
 
 class MapperNavNode:
     def __init__(self):
-        resolution = 1
+        resolution = 2
         self.vmap = VoxArray(resolution=resolution, shape=[600,600,300])
         rospy.init_node('mapper_nav', anonymous=True)
 

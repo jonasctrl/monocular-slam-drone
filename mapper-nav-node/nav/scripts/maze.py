@@ -5,7 +5,7 @@ import random
 from scipy.spatial.transform import Rotation as R
 from a_star import a_star_3d
 
-from utils import bresenham3d_get_collision
+from utils import bresenham3d_get_collision, quaternion_from_two_vectors
 # from utils import bresenham3d_check_known_space, depth_img_to_pcd
 
 cam_w = 12
@@ -18,7 +18,7 @@ def_cam_pos = [0,0,0]
 
 class Maze(object):
     def __init__(self, edge=300, height=50, num_obstacles=30):
-        self.env_map = self.generate_voxel_map_with_obstacles((edge, edge, height), num_obstacles=num_obstacles)
+        self.env_map = self.__generate_voxel_map_with_obstacles((edge, edge, height), num_obstacles=num_obstacles)
         self.cur_pos = [10,50,5]
         # self.cur_pos = [0,0,0]
         self.cur_qtr = [0,0,0,1]
@@ -33,22 +33,40 @@ class Maze(object):
         self.bounds = [(0, edge), (0, edge), (0, height)]
 
 
+        # TODO move planinng somwhere else
         # goal = (200, 200, 10)
         # goal = (60,50,20)
         # goal = (40,60,4)
-        goal = (100,80,4)
+        goal = (112,90,30)
         start = tuple(self.cur_pos)
         print(f"searching path from {start} to {goal}")
         nav_path = a_star_3d(self.env_map, start, goal)
-        nav_qtrs = len(nav_path) * [[0,0,0,1]]
+        # nav_qtrs = len(nav_path) * [[0,0,0,1]]
+
+        nav_qtrs = []
+        # cur_pos = np.array(self.cur_pos)
+        for i in range(len(nav_path) - 1):
+            p1 = np.array(nav_path[i])
+            p2 = np.array(nav_path[i+1])
+            p_diff = p2 - p1
+            # print(f"diff={p_diff}")
+            qtr = quaternion_from_two_vectors(np.array([1, 0, 0]), p_diff)
+            # qtr = quaternion_from_two_vectors(np.array([1, 0, 0]), p_diff)
+            print(f"got qtr={qtr}")
+            nav_qtrs.append(qtr)
+        
+        
         print(f"found path={nav_path}")
-        print(f"nav_qtrs={nav_qtrs}")
-        self.set_plan(nav_path, nav_qtrs)
+        # print(f"nav_qtrs={nav_qtrs}")
+
+        # print(f"end nav_qtrs")
+        # print(f"cur_qtr={self.cur_qtr}")
+        self.set_plan(nav_path, [self.cur_qtr] + nav_qtrs)
 
 
         self.step()
         
-    def generate_voxel_map_with_obstacles(self, shape, num_obstacles, seed=15):
+    def __generate_voxel_map_with_obstacles(self, shape, num_obstacles, seed=15):
         random.seed(seed)
         (x_size, y_size, z_size) = shape
         voxel_map = np.zeros((x_size, y_size, z_size), dtype=np.int8)
@@ -127,6 +145,10 @@ class Maze(object):
         # self.glob_pcd = cam_targets
         
         cam_pcd = np.array(collided)
+        if len(collided) == 0:
+            cam_pcd = []
+            return 
+
         cam_pcd = cam_pcd - pos
         cam_pcd = inv_qtr.apply(cam_pcd)
 
@@ -148,7 +170,7 @@ class Maze(object):
 
         if len(self.pos_plan):
             self.cur_pos = self.pos_plan.pop(0)
-            print(f"Steping to {self.cur_pos}")
+            print(f"Steping to {self.cur_pos} q={self.cur_qtr}")
 
         if len(self.qtr_plan):
             self.cur_qtr = self.qtr_plan.pop(0)
@@ -157,76 +179,6 @@ class Maze(object):
         self.qtr_history.append(self.cur_qtr) 
 
         self.cam_collisions()
-
-
-
-    # def visualize_voxel_map(self, cam_targets=None, cam_coll=None, camera=None):
-        # x, y, z = np.where(self.env_map == 1)  # Get the coordinates of obstacles
-        
-        # fig = go.Figure(data=[go.Scatter3d(x=x, y=y, z=z, mode='markers', 
-                                           # marker=dict(size=2, color=z, colorscale='viridis'))])
-        
-        # if cam_targets is not None and len(cam_targets) > 0:
-            # x = cam_targets[:,0]
-            # y = cam_targets[:,1]
-            # z = cam_targets[:,2]
-            # fig = fig.add_trace(go.Scatter3d(x=x, y=y, z=z, mode='markers',
-                                               # marker=dict(size=2, color="blue"), name='cam_target'))
-
-        # if cam_coll is not None and len(cam_coll) > 0:
-            # x = cam_coll[:,0]
-            # y = cam_coll[:,1]
-            # z = cam_coll[:,2]
-            # fig = fig.add_trace(go.Scatter3d(x=x, y=y, z=z, mode='markers',
-                                               # marker=dict(size=2, color="red"), name='cam_collisions'))
-        # if camera is not None:
-            # x = [camera[0]]
-            # y = [camera[1]]
-            # z = [camera[2]]
-            # fig = fig.add_trace(go.Scatter3d(x=x, y=y, z=z, mode='markers',
-                                               # marker=dict(size=2, color="green"), name='camera'))
-        # fig.update_layout(scene=dict(aspectmode='data'), title="3D Voxel Map")
-        # fig.show()
-
-
-# if __name__ == "__main__":
-    # grid_st = np.array([0, 0, 0]).astype(int)
-    # grid_shape = np.array([600, 600, 200]).astype(int)
-    # center = np.array([grid_shape[0]//2, grid_shape[1]//2, 50]).astype(int)
-    # resolution = 2.5
-
-    # cam_qtrs = generate_z_axis_quaternions(12)
-
-    # env_map = generate_voxel_map_with_obstacles(edge, edge, height, num_obstacles=30)
-    # vmap = VoxArray(center, resolution, grid_shape, grid_st)
-    
-    
-    # path_len = 12
-    
-    # cam_pos = [218,175,40]
-    # cam_poses = path_len * cam_pos
-    # # cam_qtr = [0,0,0,1]
-    # cam_qtr = [0.939,-0.052,-0.296,0.116]
-
-    # cam_tgs = []
-    # cam_col = []
-    # for i in range(path_len):
-        # ctg, col = get_cam_collisions(cam_pos, cam_qtr, env_map)
-        # cam_tgs.append(ctg)
-        # cam_col.append(col)
-
-    # # cam_tgs, cam_coll = get_cam_collisions(cam_pos, cam_qtr, env_map)
-    # # data_arr = parse_airsim_data_v3(img_end, img_skip)
-    # # data_arr = parse_airsim_data(img_end, img_skip)
-    # # data_arr = parse_data(img_end, img_skip)
-    # # for i in range(len(data_arr)):
-        # # vmap.add_pcd_from_datapoint(data_arr[i])        
-        
-    # # vmap.navigate(start, goal)
-    # # vmap.plot()
-    # # vmap.plot(use_confidence=True)
-    
-    # visualize_voxel_map(env_map, cam_targets=cam_tgs, cam_coll=cam_col, camera=cam_pos)
 
 
 

@@ -151,7 +151,8 @@ class MazeNode:
 
     def publish_status(self):
         # Independent publisher for status
-        rate = rospy.Rate(1)  # 1 Hz
+        rate = rospy.Rate(4)  # 1 Hz
+        idx=0
         while not rospy.is_shutdown():
             self.maze.step()
             print(f"Publishing")
@@ -160,14 +161,16 @@ class MazeNode:
             # status_message.data = "Node is running"
             # self.pub_status.publish(status_message)
             
-            self.publish_maze_map_msg()
+            if idx % 20 == 0: 
+                self.publish_maze_map_msg()
+
             self.publish_cam_pose_msg()
             self.publish_cam_path_msg()
             self.publish_pcd2_with_pose()
             self.publish_cam_pcd()
 
 
-
+            idx += 1
 
             rate.sleep()
 

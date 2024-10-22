@@ -2,6 +2,7 @@
 import numpy as np
 from math import tan, pi
 import sys, os
+from scipy.spatial.transform import Rotation as R
 
 
 def bresenham3d_get_collision(p1, p2, voxels, empty_val=0):
@@ -223,4 +224,34 @@ def generate_z_axis_quaternions(num_steps=10):
     return quaternions
 
 
+def quaternion_from_two_vectors(v1, v2):
+    print(f"v1={v1}, v2={v2}")
+    # Normalize both vectors
+    v1 = v1 / np.linalg.norm(v1)
+    v2 = v2 / np.linalg.norm(v2)
 
+    # Calculate the axis of rotation (cross product)
+    axis = np.cross(v1, v2)
+    
+    # Calculate the angle between the two vectors (dot product and arccos)
+    angle = np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0))
+
+    # If the vectors are parallel (angle is 0), return an identity quaternion
+    if np.isclose(angle, 0):
+        return R.from_quat([0, 0, 0, 1]).as_quat()  # No rotation
+
+    # If the vectors are opposite, return a 180-degree rotation quaternion
+    if np.isclose(angle, np.pi):
+        # Find an arbitrary orthogonal axis
+        orthogonal_axis = np.array([1, 0, 0]) if not np.allclose(v1, [1, 0, 0]) else np.array([0, 1, 0])
+        axis = np.cross(v1, orthogonal_axis)
+        axis = axis / np.linalg.norm(axis)
+        return R.from_rotvec(np.pi * axis).as_quat()
+
+    # Normalize the axis
+    axis = axis / np.linalg.norm(axis)
+
+    # Create quaternion from the axis-angle representation
+    quaternion = R.from_rotvec(angle * axis)
+
+    return quaternion.as_quat()
