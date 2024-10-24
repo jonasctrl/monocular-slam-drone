@@ -12,13 +12,15 @@ from cv_bridge import CvBridge
 # import math
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+import time
 
 from mapper import VoxArray 
 import sys, os
 
 import nav_config as cfg
 
-GUI = False
+
+g_num = 0
 
 def print_exception(ex):
     exc_type, _ , exc_tb = sys.exc_info()
@@ -35,13 +37,13 @@ def pointcloud2_to_array(msg):
 
 class MapperNavNode:
     def __init__(self):
-        # resolution = 3.2
         self.vmap = VoxArray(resolution=cfg.map_resolution, shape=[600,600,300])
         rospy.init_node('mapper_nav', anonymous=True)
 
         self.bridge = CvBridge()
         self.occupied_pub = rospy.Publisher('/occupied_space', PointCloud2, queue_size=10)
         self.cam_path_pub = rospy.Publisher('/cam_path', Path, queue_size=10)
+        self.pose_pub = rospy.Publisher('/map_pose', PoseStamped, queue_size=10)
 
         self.depth_sub = rospy.Subscriber('/ground_truth/depth_with_pose', DepthWithPose, self.image_callback)
         self.depth_sub = rospy.Subscriber('/cam_pcd_pose', Pcd2WithPose, self.pcd_pose_callback)
@@ -56,15 +58,16 @@ class MapperNavNode:
         path_msg.header.frame_id = "map"
         path_msg.header.stamp = rospy.Time.now()
 
-        for pt, qtr in zip(self.vmap.cam_path_acc, self.vmap.cam_poses):
+        # print(f"cam_poses={self.vmap.cam_poses}")
+        for pt, qtr in zip(self.vmap.cam_path_acc, self.vmap.cam_qtrs):
             (tx, ty, tz) = pt
-            # (qx, qy, qz, qw) = qtr
+            (qx, qy, qz, qw) = qtr
 
             # Need to rotate 90 deg in Z axis
-            orig_qtr = R.from_quat(qtr)
-            z_rot = R.from_euler('z', np.deg2rad(90))
-            rot_qtr = z_rot * orig_qtr
-            (qx, qy, qz, qw) = rot_qtr.as_quat()
+            # orig_qtr = R.from_quat(qtr)
+            # z_rot = R.from_euler('z', np.deg2rad(90))
+            # rot_qtr = z_rot * orig_qtr
+            # (qx, qy, qz, qw) = rot_qtr.as_quat()
             
             pose_stamped = PoseStamped()
             pose_stamped.header.frame_id = "map"
@@ -83,6 +86,30 @@ class MapperNavNode:
 
         self.cam_path_pub.publish(path_msg)
 
+    def publish_map_pose_msg(self):
+        (pt, qtr) = self.vmap.get_pose()
+        (tx, ty, tz) = pt
+        (qx, qy, qz, qw) = qtr
+
+        # print(f"cur\t qtr={qtr}")
+        # print(f"lpt\t qtr={self.vmap.cam_qtrs[-1]}")
+
+        pose_stamped = PoseStamped()
+        pose_stamped.header.frame_id = "map"
+        pose_stamped.header.stamp = rospy.Time.now()
+
+        pose_stamped.pose.position.x = tx
+        pose_stamped.pose.position.y = ty
+        pose_stamped.pose.position.z = tz
+
+        pose_stamped.pose.orientation.x = qx
+        pose_stamped.pose.orientation.y = qy
+        pose_stamped.pose.orientation.z = qz
+        pose_stamped.pose.orientation.w = qw
+
+        self.pose_pub.publish(pose_stamped)
+
+
     def publish_occupied_space_msg(self):
         points = self.vmap.get_occupied_space_pcd()
         header = Header()
@@ -93,40 +120,40 @@ class MapperNavNode:
         self.occupied_pub.publish(pcd_msg)
 
     def pcd_pose_callback(self, msg):
-        rospy.loginfo("Received Pcd2WithPose message")
+        pcd = pointcloud2_to_array(msg.pcd)
 
-        try:
-            # depth_map = self.bridge.imgmsg_to_cv2(msg.depth_image, desired_encoding='mono8')
-            pcd = pointcloud2_to_array(msg.pcd)
-            rospy.loginfo(f"PCD len: {len(pcd)}")
+        pos_pt = msg.position
+        pos  = [pos_pt.x, pos_pt.y, pos_pt.z]
 
-            pos_pt = msg.position
-            pos  = [pos_pt.x, pos_pt.y, pos_pt.z]
-            # orientation = msg.orientation
+        qtr_pt = msg.orientation
+        qtr  = [qtr_pt.x, qtr_pt.y, qtr_pt.z, qtr_pt.w]
 
-            
-            # self.vmap.add_pcd_from_depth_image(orientation, position, depth_map, 5, 1, fov=90)
+        is_glob_fame = msg.is_global_frame.data
 
-            # if depth_map is a PointCloud in global frame
-            self.vmap.add_pcd(pcd, pos)
-            
-            self.publish_occupied_space_msg()
-            self.publish_cam_path_msg()
+        # global g_num
+        # if g_num == 0:
+            # print()
+            # print()
+            # # sorted_arr = sorted(pcd)
+            # sorted_data = sorted(pcd, key=lambda x: (x[0], x[1], x[2]))
+            # sorted_data = [d.tolist() for d in sorted_data]
+            # s = [[str(e) for e in row] for row in sorted_data]
+            # lens = [max(map(len, col)) for col in zip(*s)]
+            # fmt = ' '.join('{{:{}}}'.format(x) for x in lens)
+            # table = [fmt.format(*row) for row in s]
+            # print('\n'.join(table))
+            # print()
+            # print(f"pos={pos}")
+            # print(f"qtr={qtr}")
+            # print()
+        # g_num+=1
 
-            # depth_msg = self.bridge.cv2_to_imgmsg(depth_map, encoding='32FC1')
+        self.vmap.update(pcd, pos, qtr, is_glob_fame)
+        
+        self.publish_map_pose_msg()
+        self.publish_occupied_space_msg()
+        self.publish_cam_path_msg()
 
-            # Create and publish DepthWithPose message
-            # depth_with_pose_msg = DepthWithPose()
-            # depth_with_pose_msg.depth_image = depth_msg
-            # depth_with_pose_msg.position = position
-            # depth_with_pose_msg.orientation = orientation
-
-            # self.depth_pub.publish(depth_with_pose_msg)
-            # rospy.loginfo("Published depth_with_pose message")
-
-        except Exception as e:
-            print_exception(e)
-            # rospy.logerr(f"Error processing image: {str(e)}")
 
 
     def image_callback(self, msg):

@@ -8,7 +8,10 @@ ray_miss_incr = -1
 ray_hit_incr = 5
 
 
-map_resolution = 2
+# map_resolution = 1
+# map_resolution = 2
+map_resolution = 4
+# map_resolution = 8
 
 
 cam_w = 18

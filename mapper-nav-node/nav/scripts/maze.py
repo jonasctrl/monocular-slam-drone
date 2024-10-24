@@ -47,15 +47,16 @@ class Maze(object):
             p2 = np.array(nav_path[i+1])
             p_diff = p2 - p1
             qtr = quaternion_from_two_vectors(np.array([1, 0, 0]), p_diff)
-            # qtr = quaternion_from_two_vectors(np.array([1, 0, 0]), p_diff)
             nav_qtrs.append(qtr)
+            # nav_qtrs.append([0,0,0,1])
         
         
         print(f"found path={nav_path}")
-        # print(f"nav_qtrs={nav_qtrs}")
+        print(f"nav_qtrs={nav_qtrs}")
 
         # print(f"end nav_qtrs")
         # print(f"cur_qtr={self.cur_qtr}")
+        # nav_path = np.array(nav_path, dtype=np.float32).tolist()
         self.set_plan(nav_path, [self.cur_qtr] + nav_qtrs)
 
 
@@ -140,7 +141,6 @@ class Maze(object):
 
         self.cam_targets = cam_targets
         self.glob_pcd = np.array(collided)
-        # self.glob_pcd = cam_targets
         
         cam_pcd = np.array(collided)
         if len(collided) == 0:
@@ -150,8 +150,12 @@ class Maze(object):
         cam_pcd = cam_pcd - pos
         cam_pcd = inv_qtr.apply(cam_pcd)
 
-        self.cam_pcd = cam_pcd
-        # self.cam_pcd = cam_targets
+        self.cam_pcd = cam_pcd.astype(np.float32)
+        
+
+        # cam_pcd_kp = qtr.apply(cam_pcd)
+        # cam_pcd_kp = cam_pcd_kp + pos
+        # self.glob_pcd =  cam_pcd_kp
 
     def set_plan(self, new_pos_plan:list, new_qtr_plan:list):
         self.pos_plan = new_pos_plan
@@ -163,12 +167,13 @@ class Maze(object):
 
     def step(self):
         if len(self.pos_plan) == 0:
-            print(f"No more planned steps")
+            pass
+            # print(f"No more planned steps")
             # return 
 
         if len(self.pos_plan):
             self.cur_pos = self.pos_plan.pop(0)
-            print(f"Steping to {self.cur_pos} q={self.cur_qtr}")
+            # print(f"Steping to {self.cur_pos} q={self.cur_qtr}")
 
         if len(self.qtr_plan):
             self.cur_qtr = self.qtr_plan.pop(0)

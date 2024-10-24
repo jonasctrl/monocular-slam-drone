@@ -5,10 +5,16 @@ import sys, os
 from scipy.spatial.transform import Rotation as R
 import nav_config as cfg
 
+from numba import njit
+
+@njit
 def in_bounds(voxels, x, y, z):
     s=voxels.shape
     return 0 <= x < s[0] and 0 <= y < s[1] and 0 <= z < s[2] 
 
+
+
+@njit
 def clamp(v, a, b):
     if v < a:
         return a
@@ -17,6 +23,7 @@ def clamp(v, a, b):
     return v
 
 
+@njit
 def bresenham3d_raycast(p1, p2, voxels):
     x1, y1, z1 = p1
     x2, y2, z2 = p2
@@ -138,7 +145,6 @@ def generate_z_axis_quaternions(num_steps=10):
 
 
 def quaternion_from_two_vectors(v1, v2):
-    print(f"v1={v1}, v2={v2}")
     # Normalize both vectors
     v1 = v1 / np.linalg.norm(v1)
     v2 = v2 / np.linalg.norm(v2)

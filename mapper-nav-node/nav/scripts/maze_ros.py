@@ -2,7 +2,7 @@
 
 import rospy
 from sensor_msgs.msg import PointCloud2
-from sensor_msgs import point_cloud2
+from sensor_msgs import point_cloud2 as pc2
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Header, String
@@ -16,6 +16,18 @@ import sys
 
 from maze import Maze
 
+GLOB_FRAME = False
+# GLOB_FRAME = True
+
+g_num = 0
+
+def pointcloud2_to_array(msg):
+    # Extract the fields from PointCloud2 message
+    points = []
+    for point in pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True):
+        points.append([point[0], point[1], point[2]])
+    return np.array(points)
+
 class MazeNode:
     def __init__(self):
         # self.vmap = mapper_start()
@@ -24,7 +36,7 @@ class MazeNode:
 
         self.bridge = CvBridge()
 
-        self.maze_pub = rospy.Publisher('/maze_map', PointCloud2, queue_size=10)
+        self.maze_pub = rospy.Publisher('/maze_map', PointCloud2, queue_size=1)
         self.cam_path_pub = rospy.Publisher('/path_hist', Path, queue_size=10)
         # self.depth_pub = rospy.Publisher('/depth_with_pose', DepthWithPose, queue_size=10)
         self.pcd2_pose_pub = rospy.Publisher('/cam_pcd_pose', Pcd2WithPose, queue_size=10)
@@ -48,6 +60,8 @@ class MazeNode:
         path_msg.header.stamp = rospy.Time.now()
 
         cam_poses, cam_qtrs = self.maze.get_path()
+
+        # print(f"cam_qtrs={cam_qtrs}")
         for pt, qtr in zip(cam_poses, cam_qtrs):
             (tx, ty, tz) = pt
             (qx, qy, qz, qw) = qtr
@@ -102,16 +116,17 @@ class MazeNode:
         header = Header()
         header.stamp = rospy.Time.now()
         header.frame_id = "map"
-        pcd_msg = point_cloud2.create_cloud_xyz32(header, points)
+        pcd_msg = pc2.create_cloud_xyz32(header, points)
 
         self.maze_pub.publish(pcd_msg)
 
     def publish_cam_pcd(self):
         points = self.maze.get_glob_pcd()
+        # points = self.maze.get_cam_pcd()
         header = Header()
         header.stamp = rospy.Time.now()
         header.frame_id = "map"
-        pcd_msg = point_cloud2.create_cloud_xyz32(header, points)
+        pcd_msg = pc2.create_cloud_xyz32(header, points)
 
         self.cam_pcd_pub.publish(pcd_msg)
         
@@ -120,20 +135,49 @@ class MazeNode:
         try:
             # Get camera position and orientation
             (position, orientation) = self.maze.get_pose()
+            position = np.array(position, dtype=np.float32)
             (tx, ty, tz) = position
+            orientation = np.array(orientation, dtype=np.float32)
             (qx, qy, qz, qw) = orientation
+            # print(f"pcd2_with_pose:\t\t{orientation}")
 
-            points = self.maze.get_glob_pcd()
 
             # print(f"points:{points}")
 
             header = Header()
             header.stamp = rospy.Time.now()
             header.frame_id = "map"
-            pcd_msg = point_cloud2.create_cloud_xyz32(header, points)
 
             # Create and publish DepthWithPose message
             pcd_with_pose_msg = Pcd2WithPose()
+            
+            if GLOB_FRAME: 
+                points = self.maze.get_glob_pcd()
+                pcd_with_pose_msg.is_global_frame.data = True
+            else:
+                points = self.maze.get_cam_pcd()
+                pcd_with_pose_msg.is_global_frame.data = False
+
+            pcd_msg = pc2.create_cloud_xyz32(header, points)
+
+            # global g_num
+            # if g_num == 1:
+                # print()
+                # print()
+                # sorted_data = sorted(np.array(points), key=lambda x: (x[0], x[1], x[2]))
+                # sorted_data = [d.tolist() for d in sorted_data]
+                # s = [[str(e) for e in row] for row in sorted_data]
+                # lens = [max(map(len, col)) for col in zip(*s)]
+                # fmt = ' '.join('{{:{}}}'.format(x) for x in lens)
+                # table = [fmt.format(*row) for row in s]
+                # print('\n'.join(table))
+                # print()
+                # print(f"pos={position}")
+                # print(f"qtr={orientation}")
+                # print()
+
+            # g_num+=1
+
             pcd_with_pose_msg.pcd = pcd_msg
             pcd_with_pose_msg.position.x = tx
             pcd_with_pose_msg.position.y = ty
@@ -142,7 +186,6 @@ class MazeNode:
             pcd_with_pose_msg.orientation.y = qy
             pcd_with_pose_msg.orientation.z = qz
             pcd_with_pose_msg.orientation.w = qw
-            pcd_with_pose_msg.is_global_frame.data = True
 
             self.pcd2_pose_pub.publish(pcd_with_pose_msg)
 
@@ -155,7 +198,7 @@ class MazeNode:
         idx=0
         while not rospy.is_shutdown():
             self.maze.step()
-            print(f"Publishing")
+            # print(f"Publishing")
 
             # status_message = String()
             # status_message.data = "Node is running"
