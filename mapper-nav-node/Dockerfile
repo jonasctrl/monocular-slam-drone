@@ -65,12 +65,16 @@ RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && catkin_make"
 RUN echo "source /catkin_ws/devel/setup.bash" >> ~/.bashrc
 ENV ROS_PACKAGE_PATH=/catkin_ws/src
 
-RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
-
-#CMD ["sleep", "infinity"]
-# Build the workspace
-RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    cd /catkin_ws && catkin_make"
-
 WORKDIR /catkin_ws/src
+COPY ./nav/launch ./nav/launch
+COPY ./nav/rviz ./nav/rviz
+COPY ./nav/scripts ./nav/scripts
+COPY ./nav/msg ./nav/msg
+COPY ./nav/CMakeLists.txt ./nav/CMakeLists.txt
+COPY ./nav/package.xml ./nav/package.xml
+
+#Build the workspace
+RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && \
+	cd /catkin_ws && catkin_make "
+#CMD ["sleep", "infinity"]
 CMD ["/bin/bash", "-c", "source /catkin_ws/devel/setup.bash && roslaunch nav mapper_nav.launch"]

@@ -1,6 +1,8 @@
 import numpy as np
 import heapq
 
+import nav_config as cfg
+
 # Heuristic: Euclidean distance between two points
 def heuristic(p1, p2):
     return np.linalg.norm(np.array(p1) - np.array(p2))
@@ -19,8 +21,11 @@ def get_neighbors(node, grid):
                 # Ensure the neighbor is within the bounds of the grid
                 if 0 <= new_x < grid.shape[0] and 0 <= new_y < grid.shape[1] and 0 <= new_z < grid.shape[2]:
                     # Add only valid neighbors (e.g., avoiding obstacles)
-                    if grid[new_x, new_y, new_z] == -1:  # Assume 0 is traversable and 1 is an obstacle
+                    # if cfg.occup_min <= grid[new_x, new_y, new_z] < cfg.occup_thr:
+                    if grid[new_x, new_y, new_z] == 0:
                         neighbors.append((new_x, new_y, new_z))
+                    # else:
+                        # print(f"not passible={(new_x, new_y, new_z)}")
     return neighbors
 
 # A* algorithm for 3D space
