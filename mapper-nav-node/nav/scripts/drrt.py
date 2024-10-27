@@ -75,7 +75,6 @@ class Node:
         
         assert self.parent.children.get(self.pos) == self
 
-
     def connect_child(self, child:Node) -> None:
         assert child
         child.set_root()
@@ -83,33 +82,6 @@ class Node:
         self.children[child.pos] = child
 
         child.update_costs_rec()
-
-    # def set_node(self, parent, end):
-        
-        # self.parent[START_END] = parent
-        # parent.children[START_END][self.pos] = self
-
-        # self.parent[GOAL_END] = parent
-        # parent.children[GOAL_END][self.pos] = self
-
-        # self.update_costs_rec(end=end)
-        # inv_end = iend(end)
-        # if self.cost[inv_end] != float("inf"):
-            # self.update_costs_rec(end=inv_end)
-
-        
-
-    # def move_parent(self, new_parent, end):
-        # if self.is_root:
-            # return
-
-        # parent = self.parent
-        # if parent is not None:
-            # del parent.children[self.pos]
-
-        # self.parent = new_parent
-        # new_parent.children[self.pos] = self
-        # self.update_costs_rec(end=end)
 
     def breakoff(self) -> None:
         parent = self.parent
@@ -442,6 +414,18 @@ class DRRT:
         node_path = self.get_path()
         return node_path
 
+    def update_start(self, pos:tuple) -> bool:
+        if pos == self.goal.pos:
+            return False
+
+        return self.__set_new_root(pos, START_END)
+
+    def update_goal(self, pos:tuple) -> bool:
+        if pos == self.start.pos:
+            return False
+
+        return self.__set_new_root(pos, GOAL_END)
+
     def validate_nodes(self) -> None:
         # Check parent-child relations for forward_dict
         for n in self.forward_dict.values():
@@ -558,18 +542,6 @@ class DRRT:
         plt.axis("equal")
         plt.show()
 
-    def update_start(self, pos:tuple) -> bool:
-        if pos == self.goal.pos:
-            return False
-
-        return self.__set_new_root(pos, START_END)
-
-    def update_goal(self, pos:tuple) -> bool:
-        if pos == self.start.pos:
-            return False
-
-        return self.__set_new_root(pos, GOAL_END)
-
 
 if __name__ == "__main__":
     start = (7, 1)
@@ -652,11 +624,6 @@ if __name__ == "__main__":
         m.update_obstacles(random_tuples, clear=False)  # Update the tree with the new obstacles
         path = m.plan()
         m.validate_nodes()
-        
-        # m.plot()
-        
-    # m.validate_nodes()
-    # m.plot()
         
         
         
