@@ -20,10 +20,10 @@ CONN_OPOSITE = 3
 CONN_NOT_CURRENT = 3
 
 # random.seed(15)
-random.seed(16)
-# random.seed(17)
+# random.seed(16)
+random.seed(17)
 
-DEBUG=0
+DEBUG=1
 
 def dbg(*args, **kwargs):
     if DEBUG != 0:
@@ -244,9 +244,7 @@ class DRRT:
             if not self.__add_node(None, new_node, end):
                 return False
             
-        
         new_node.set_root()
-        new_node.is_root = True
 
         if end == START_END:
             dbg(f"old start {self.start.pos} {self.start}")
@@ -258,6 +256,8 @@ class DRRT:
             self.goal.is_root = False
             self.goal = new_node
             dbg(f"new goal {self.goal.pos} {self.goal}")
+
+        new_node.is_root = True
 
         self.__update_total_cost()
         self.__delete_orphans()
@@ -273,7 +273,8 @@ class DRRT:
             self.obst_dict.clear()
 
         for o in ob_list:
-            self.add_obstacle(o)
+            if o != self.start.pos and o != self.goal.pos:
+                self.add_obstacle(o)
         self.__update_total_cost()
         self.__delete_orphans()
 
@@ -558,15 +559,21 @@ class DRRT:
         plt.show()
 
     def update_start(self, pos:tuple) -> bool:
+        if pos == self.goal.pos:
+            return False
+
         return self.__set_new_root(pos, START_END)
 
     def update_goal(self, pos:tuple) -> bool:
+        if pos == self.start.pos:
+            return False
+
         return self.__set_new_root(pos, GOAL_END)
 
 
 if __name__ == "__main__":
-    start = (4, 5)
-    goal = (18, 18)
+    start = (7, 1)
+    goal = (17, 17)
     obstacle_list = [(10,9), (6, 9), (14, 10), (12, 9), (7, 8), (15, 11)]
     shp = (20, 20)
 
@@ -608,11 +615,13 @@ if __name__ == "__main__":
         m.validate_nodes()
         # m.plot()
 
-    for i in range(100):
+    for i in range(3000):
+        print(f"test iter:{i}")
         new_x = random.randint(0, m.shp[0])
         new_y = random.randint(0, m.shp[1])
         new_pos = (new_x, new_y)
-        if i % 2 == 0:
+        end_mod = random.randint(0,10)
+        if end_mod % 2 == 0:
             dbg(f"Updating start to {new_pos}")
             status = m.update_start(new_pos)
             dbg(f"status={'OK' if status else 'FAIL'}")
@@ -624,10 +633,11 @@ if __name__ == "__main__":
         m.validate_nodes()
         path = m.plan()
 
-        list_length = random.randint(5, 50)
+        list_length = random.randint(5, 100)
         random_tuples = [(random.randint(0, shp[0]-1), \
                 random.randint(0, shp[1]-1)) for _ in range(list_length)]
         
+        m.update_obstacles(random_tuples, clear=True)  # Update the tree with the new obstacles
         m.validate_nodes()
         path = m.plan(force_iters=random.randint(0, 200))
         # m.plot()
@@ -635,10 +645,11 @@ if __name__ == "__main__":
         path = m.plan()
         m.validate_nodes()
 
-        list_length = random.randint(5, 50)
+        list_length = random.randint(5, 150)
         random_tuples = [(random.randint(0, shp[0]-1), \
                 random.randint(0, shp[1]-1)) for _ in range(list_length)]
 
+        m.update_obstacles(random_tuples, clear=False)  # Update the tree with the new obstacles
         path = m.plan()
         m.validate_nodes()
         
