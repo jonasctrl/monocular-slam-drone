@@ -3,11 +3,12 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 import time
 
-from a_star import a_star_3d
+# from a_star import a_star_3d
 from utils import bresenham3d_raycast, depth_img_to_pcd, clamp, quaternion_from_two_vectors
 import nav_config as cfg
 # from math import tan, pi
-from d_star import DStar
+# from d_star import DStar
+from drrt import DRRT
 
 from numba import njit
 
@@ -125,8 +126,12 @@ class VoxArray:
         self.data = []
         self.data_idx = 0
 
-        self.pf = DStar(x_start=int(self.pos[0]), y_start=int(self.pos[1]),
-                        x_goal=int(self.goal[0]), y_goal=int(self.goal[1]))
+        # self.pf = DStar(x_start=int(self.pos[0]), y_start=int(self.pos[1]),
+                        # x_goal=int(self.goal[0]), y_goal=int(self.goal[1]))
+
+        self.pf = DRRT(start=(self.pos[0],self.pos[1]), goal=(self.pos[0]+1,self.pos[1]), shape=(shape[0], shape[1]), step_size=1, max_iter=200, goal_sample_rate=0.2)
+
+
     
     def get_pose(self):
         return self.pos, self.qtr

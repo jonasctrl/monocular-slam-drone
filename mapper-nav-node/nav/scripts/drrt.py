@@ -237,8 +237,16 @@ class DRRT:
         return True
     
     def add_obstacle(self, pos:tuple) -> None:
-        self.__delete_node(BOTH_END, pos)
-        self.obst_dict[pos] = 1
+        (x, y, v) = pos
+        ob_pos = (x, y)
+        if v == -1:
+            self.__delete_node(BOTH_END, ob_pos)
+            self.obst_dict[ob_pos] = 1
+        elif v == 0:
+            if self.obst_dict.get(ob_pos) is not None:
+                del self.obst_dict[ob_pos]
+        else:
+            raise Exception("Unsupported obstacle value:{v} should be 0 or -1")
 
     def update_obstacles(self, ob_list:List[tuple], clear:bool=False) -> None:
         if clear:
@@ -546,10 +554,10 @@ class DRRT:
 if __name__ == "__main__":
     start = (7, 1)
     goal = (17, 17)
-    obstacle_list = [(10,9), (6, 9), (14, 10), (12, 9), (7, 8), (15, 11)]
+    obstacle_list = [(10,9, -1), (6, 9, -1), (14, 10, -1), (12, 9, -1), (7, 8, -1), (15, 11, -1)]
     shp = (20, 20)
 
-    m = DRRT(start, goal, shp, step_size=1, max_iter=200, goal_sample_rate=0.1)
+    m = DRRT(start, goal, shp, step_size=1, max_iter=200, goal_sample_rate=0.2)
     path = m.plan()
     m.validate_nodes()
     # m.plot()
@@ -559,23 +567,23 @@ if __name__ == "__main__":
     m.validate_nodes()
     # m.plot()
 
-    obstacle_list.append((7, 10))  # New obstacle
-    obstacle_list.append((12, 4))  # New obstacle
-    obstacle_list.append((13, 9))  # New obstacle
-    obstacle_list.append((8, 8))  # New obstacle
-    obstacle_list.append((7, 9))  # New obstacle
-    obstacle_list.append((8, 9))  # New obstacle
-    obstacle_list.append((9, 9))  # New obstacle
-    obstacle_list.append((11, 9))  # New obstacle
-    m.update_obstacles(obstacle_list)  # Update the tree with the new obstacles
+    obstacle_list.append((7, 10, -1))
+    obstacle_list.append((12, 4, -1))
+    obstacle_list.append((13, 9, -1))
+    obstacle_list.append((8, 8, -1))
+    obstacle_list.append((7, 9, -1))
+    obstacle_list.append((8, 9, -1))
+    obstacle_list.append((9, 9, -1))
+    obstacle_list.append((11, 9, -1))
+    m.update_obstacles(obstacle_list)
     # m.plot()
     path = m.plan()
     path = [n.pos for n in m.get_path()]
     print(f"path={path}")
     # m.plot()
 
-    obstacle_list.append((10, 13))  # New obstacle
-    m.update_obstacles(obstacle_list)  # Update the tree with the new obstacles
+    obstacle_list.append((10, 13, -1))
+    m.update_obstacles(obstacle_list)
     # m.plot()
     path = m.plan()
     # path = [n.pos for n in m.get_path()[0]]
@@ -607,7 +615,7 @@ if __name__ == "__main__":
 
         list_length = random.randint(5, 100)
         random_tuples = [(random.randint(0, shp[0]-1), \
-                random.randint(0, shp[1]-1)) for _ in range(list_length)]
+                random.randint(0, shp[1]-1), random.randint(-1,0)) for _ in range(list_length)]
         
         m.update_obstacles(random_tuples, clear=True)  # Update the tree with the new obstacles
         m.validate_nodes()
@@ -619,7 +627,7 @@ if __name__ == "__main__":
 
         list_length = random.randint(5, 150)
         random_tuples = [(random.randint(0, shp[0]-1), \
-                random.randint(0, shp[1]-1)) for _ in range(list_length)]
+                random.randint(0, shp[1]-1), random.randint(-1,0)) for _ in range(list_length)]
 
         m.update_obstacles(random_tuples, clear=False)  # Update the tree with the new obstacles
         path = m.plan()

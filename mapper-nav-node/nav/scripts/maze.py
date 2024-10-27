@@ -3,7 +3,7 @@ import random
 
 # import plotly.graph_objects as go
 from scipy.spatial.transform import Rotation as R
-from a_star import a_star_3d
+# from a_star import a_star_3d
 
 from utils import bresenham3d_raycast, quaternion_from_two_vectors
 # from utils import bresenham3d_check_known_space, depth_img_to_pcd
