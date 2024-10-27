@@ -1,7 +1,6 @@
 FROM ros:noetic-ros-core
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV DISPLAY=:0
 ENV QT_X11_NO_MITSHM=1
 ENV LANG C.UTF-8
 ENV GDK_BACKEND=x11
@@ -20,6 +19,7 @@ RUN apt-get update && \
     ros-${ROS_DISTRO}-camera-info-manager \
     ros-${ROS_DISTRO}-roslint \
     ros-${ROS_DISTRO}-rosbash \
+    ros-${ROS_DISTRO}-rviz \
     python3-catkin-tools \
     libgl1-mesa-glx \
     git \

@@ -8,6 +8,34 @@
   "LocalHostIp": "127.0.0.1",
   "ApiServerPort": 41451,
   "RpcEnabled": true,
+  "CameraDefaults": {
+    "CaptureSettings": [
+      {
+        "ImageType": 0,
+        "Width": 256,
+        "Height": 192,
+        "FOV_Degrees": 90,
+        "AutoExposureSpeed": 100,
+        "MotionBlurAmount": 0
+      },
+	  {
+        "ImageType": 1,
+        "Width": 256,
+        "Height": 192,
+        "FOV_Degrees": 90,
+        "AutoExposureSpeed": 100,
+        "MotionBlurAmount": 0
+      },
+      {
+        "ImageType": 5,
+        "Width": 256,
+        "Height": 192,
+        "FOV_Degrees": 90,
+        "AutoExposureSpeed": 100,
+        "MotionBlurAmount": 0
+      }
+    ]
+  },
   "Vehicles": {
     "SimpleFlight": {
       "VehicleType": "SimpleFlight",
@@ -48,7 +76,28 @@
           "Roll": 0.0,
           "Yaw": 0.0
         }
-      }
+      },
+	  "Sensors": {
+            "LidarSensor1": {
+                "SensorType": 6,
+                "Enabled" : false,
+                "NumberOfChannels": 16,
+                "PointsPerSecond": 10000,
+				"Range": 100,
+                "X": 0, "Y": 0, "Z": -0.3,
+                "DrawDebugPoints": true
+            }
+        }
     }
+  },
+    "SubWindows": [
+    {"WindowID": 0, "CameraName": "0", "ImageType": 3, "VehicleName": "", "Visible": true},
+    {"WindowID": 1, "CameraName": "0", "ImageType": 5, "VehicleName": "", "Visible": true},
+    {"WindowID": 2, "CameraName": "0", "ImageType": 0, "VehicleName": "", "Visible": true}
+  ],
+  "SegmentationSettings": {
+    "InitMethod": "",
+    "MeshNamingMethod": "",
+    "OverrideExisting": false
   }
 }

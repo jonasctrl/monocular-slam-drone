@@ -23,7 +23,7 @@ class AirSimDatafeedNode:
         self.sequence = 0
 
     def get_camera_info(self):
-        camera_info = self.client.simGetCameraInfo(CAMERA, "")
+        camera_info = self.client.simGetCameraInfo(CAMERA)
         position = Point()
         orientation = Quaternion()
 
@@ -37,7 +37,7 @@ class AirSimDatafeedNode:
         orientation.w = camera_info.pose.orientation.w_val
 
         return position, orientation
-
+    
     def publish_rgb_with_pose(self):
         try:
             response = self.client.simGetImages([airsim.ImageRequest(CAMERA, airsim.ImageType.Scene, pixels_as_float=False, compress=False)])[0]
