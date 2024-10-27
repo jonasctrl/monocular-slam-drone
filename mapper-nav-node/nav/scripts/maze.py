@@ -34,30 +34,24 @@ class Maze(object):
         # goal = (200, 200, 10)
         # goal = (60,50,20)
         # goal = (40,60,4)
-        goal = (100,90,10)
-        start = tuple(self.cur_pos)
-        print(f"searching path from {start} to {goal}")
-        nav_path = a_star_3d(self.env_map, start, goal)
-        # nav_qtrs = len(nav_path) * [[0,0,0,1]]
 
-        nav_qtrs = []
-        # cur_pos = np.array(self.cur_pos)
-        for i in range(len(nav_path) - 1):
-            p1 = np.array(nav_path[i])
-            p2 = np.array(nav_path[i+1])
-            p_diff = p2 - p1
-            qtr = quaternion_from_two_vectors(np.array([1, 0, 0]), p_diff)
-            nav_qtrs.append(qtr)
-            # nav_qtrs.append([0,0,0,1])
+        # goal = (100,90,10)
+        # start = tuple(self.cur_pos)
+        # print(f"searching path from {start} to {goal}")
+        # nav_path = a_star_3d(self.env_map, start, goal)
+
+        # nav_qtrs = []
+        # for i in range(len(nav_path) - 1):
+            # p1 = np.array(nav_path[i])
+            # p2 = np.array(nav_path[i+1])
+            # p_diff = p2 - p1
+            # qtr = quaternion_from_two_vectors(np.array([1, 0, 0]), p_diff)
+            # nav_qtrs.append(qtr)
         
         
-        print(f"found path={nav_path}")
-        print(f"nav_qtrs={nav_qtrs}")
-
-        # print(f"end nav_qtrs")
-        # print(f"cur_qtr={self.cur_qtr}")
-        # nav_path = np.array(nav_path, dtype=np.float32).tolist()
-        self.set_plan(nav_path, [self.cur_qtr] + nav_qtrs)
+        # print(f"found path={nav_path}")
+        # print(f"nav_qtrs={nav_qtrs}")
+        # self.set_plan(nav_path, [self.cur_qtr] + nav_qtrs)
 
 
         self.step()
@@ -134,7 +128,7 @@ class Maze(object):
         for ctg in cam_targets:
             # col = bresenham3d_raycast(pos, ctg, self.env_map, get_collision=True, update_unkn=False)
             cols = bresenham3d_raycast(pos, ctg, self.env_map)
-            cols = [(x, y, z) for (x, y, z, v) in cols if v != 0]
+            cols = [(x, y, z) for i, (x, y, z, v) in enumerate(cols) if v != 0 and i + 1 < len(cols) ]
             if len(cols) > 0:
                 collided.append(cols[0])
 

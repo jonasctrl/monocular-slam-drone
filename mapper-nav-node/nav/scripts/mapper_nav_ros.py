@@ -4,7 +4,7 @@ import rospy
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs import point_cloud2 as pc2
 from nav_msgs.msg import Path
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, PointStamped, Point
 from std_msgs.msg import Header
 from nav.msg import Pcd2WithPose, DepthWithPose
 import cv2
@@ -41,9 +41,14 @@ class MapperNavNode:
         rospy.init_node('mapper_nav', anonymous=True)
 
         self.bridge = CvBridge()
-        self.occupied_pub = rospy.Publisher('/occupied_space', PointCloud2, queue_size=10)
+        self.occupied_pub = rospy.Publisher('/occupied_space', PointCloud2, queue_size=3)
+        self.empty_pub = rospy.Publisher('/empty_space', PointCloud2, queue_size=3)
         self.cam_path_pub = rospy.Publisher('/cam_path', Path, queue_size=10)
+        self.plan_path_pub = rospy.Publisher('/plan_path', Path, queue_size=10)
         self.pose_pub = rospy.Publisher('/map_pose', PoseStamped, queue_size=10)
+
+        self.start_pub = rospy.Publisher('/nav_start', PointStamped, queue_size=10)
+        self.goal_pub = rospy.Publisher('/nav_goal', PointStamped, queue_size=10)
 
         self.depth_sub = rospy.Subscriber('/ground_truth/depth_with_pose', DepthWithPose, self.image_callback)
         self.depth_sub = rospy.Subscriber('/cam_pcd_pose', Pcd2WithPose, self.pcd_pose_callback)
@@ -86,6 +91,41 @@ class MapperNavNode:
 
         self.cam_path_pub.publish(path_msg)
 
+    def publish_plan_path_msg(self):
+        path_msg = Path()
+
+        path_msg.header = Header()
+        path_msg.header.frame_id = "map"
+        path_msg.header.stamp = rospy.Time.now()
+
+        # print(f"cam_poses={self.vmap.cam_poses}")
+        path = self.vmap.get_plan()
+        for pt in path:
+            (tx, ty, tz) = pt
+
+            # Need to rotate 90 deg in Z axis
+            # orig_qtr = R.from_quat(qtr)
+            # z_rot = R.from_euler('z', np.deg2rad(90))
+            # rot_qtr = z_rot * orig_qtr
+            # (qx, qy, qz, qw) = rot_qtr.as_quat()
+            
+            pose_stamped = PoseStamped()
+            pose_stamped.header.frame_id = "map"
+            pose_stamped.header.stamp = rospy.Time.now()
+
+            pose_stamped.pose.position.x = tx
+            pose_stamped.pose.position.y = ty
+            pose_stamped.pose.position.z = tz
+
+            pose_stamped.pose.orientation.x = 0
+            pose_stamped.pose.orientation.y = 0
+            pose_stamped.pose.orientation.z = 0
+            pose_stamped.pose.orientation.w = 1
+
+            path_msg.poses.append(pose_stamped)
+
+        self.plan_path_pub.publish(path_msg)
+
     def publish_map_pose_msg(self):
         (pt, qtr) = self.vmap.get_pose()
         (tx, ty, tz) = pt
@@ -110,6 +150,22 @@ class MapperNavNode:
         self.pose_pub.publish(pose_stamped)
 
 
+    def publish_start_msg(self):
+        (x, y, z) = self.vmap.get_start()
+        point_msg = PointStamped()
+        point_msg.header.stamp = rospy.Time.now()
+        point_msg.header.frame_id = "map"  # Adjust to your frame of reference
+        point_msg.point = Point(x, y, z)
+        self.start_pub.publish(point_msg)
+
+    def publish_goal_msg(self):
+        (x, y, z) = self.vmap.get_goal()
+        point_msg = PointStamped()
+        point_msg.header.stamp = rospy.Time.now()
+        point_msg.header.frame_id = "map"  # Adjust to your frame of reference
+        point_msg.point = Point(x, y, z)
+        self.goal_pub.publish(point_msg)
+
     def publish_occupied_space_msg(self):
         points = self.vmap.get_occupied_space_pcd()
         header = Header()
@@ -118,6 +174,15 @@ class MapperNavNode:
         pcd_msg = pc2.create_cloud_xyz32(header, points)
 
         self.occupied_pub.publish(pcd_msg)
+
+    def publish_empty_space_msg(self):
+        points = self.vmap.get_empty_space_pcd()
+        header = Header()
+        header.stamp = rospy.Time.now()
+        header.frame_id = "map"
+        pcd_msg = pc2.create_cloud_xyz32(header, points)
+
+        self.empty_pub.publish(pcd_msg)
 
     def pcd_pose_callback(self, msg):
         pcd = pointcloud2_to_array(msg.pcd)
@@ -150,8 +215,12 @@ class MapperNavNode:
 
         self.vmap.update(pcd, pos, qtr, is_glob_fame)
         
+        self.publish_start_msg()
+        self.publish_goal_msg()
+        self.publish_plan_path_msg()
         self.publish_map_pose_msg()
         self.publish_occupied_space_msg()
+        self.publish_empty_space_msg()
         self.publish_cam_path_msg()
 
 

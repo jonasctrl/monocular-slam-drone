@@ -89,10 +89,11 @@ def bresenham3d_raycast(p1, p2, voxels):
             err2 += 2 * dy
             z1 += sz
 
-    return path
 
     # Add the final voxel (end point)
-    # voxels.append((x2, y2, z2))
+    path.append((x2, y2, z2, voxels[x2, y2, z2]))
+
+    return path
 
 def depth_img_to_pcd(img, skip, factor, cam_params=None, fov=None, max_depth=float("inf")):
     height, width = img.shape

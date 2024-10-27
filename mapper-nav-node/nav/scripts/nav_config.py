@@ -3,6 +3,7 @@ occup_unkn = -128
 occup_min = 0
 occup_max = 12
 occup_thr = 8
+# occup_thr = 5
 
 ray_miss_incr = -1
 ray_hit_incr = 5
