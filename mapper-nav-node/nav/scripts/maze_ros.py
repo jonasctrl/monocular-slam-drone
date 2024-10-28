@@ -30,19 +30,20 @@ def pointcloud2_to_array(msg):
 
 class MazeNode:
     def __init__(self):
-        # self.vmap = mapper_start()
         self.maze= Maze(120, 40)
         rospy.init_node('maze', anonymous=True)
 
         self.bridge = CvBridge()
 
         self.maze_pub = rospy.Publisher('/maze_map', PointCloud2, queue_size=1)
-        self.cam_path_pub = rospy.Publisher('/path_hist', Path, queue_size=10)
+        self.cam_path_pub = rospy.Publisher('/path_hist', Path, queue_size=1)
         # self.depth_pub = rospy.Publisher('/depth_with_pose', DepthWithPose, queue_size=10)
-        self.pcd2_pose_pub = rospy.Publisher('/cam_pcd_pose', Pcd2WithPose, queue_size=10)
-        self.cam_pcd_pub = rospy.Publisher('/cam_pcd', PointCloud2, queue_size=10)
-        self.pose_pub = rospy.Publisher('/cam_pose', PoseStamped, queue_size=10)
-        self.pub_status = rospy.Publisher('/status', String, queue_size=10)
+        self.pcd2_pose_pub = rospy.Publisher('/cam_pcd_pose', Pcd2WithPose, queue_size=1)
+        self.cam_pcd_pub = rospy.Publisher('/cam_pcd', PointCloud2, queue_size=1)
+        self.pose_pub = rospy.Publisher('/cam_pose', PoseStamped, queue_size=1)
+        self.pub_status = rospy.Publisher('/status', String, queue_size=1)
+        self.cam_path_pub = rospy.Publisher('/path_hist', Path, queue_size=1)
+        self.path_sub = rospy.Subscriber('/plan_path', Path, self.path_callback)
 
         # Internal state
         self.sensor_data = None
@@ -194,7 +195,9 @@ class MazeNode:
 
     def publish_status(self):
         # Independent publisher for status
-        rate = rospy.Rate(4)  # 1 Hz
+        # rate = rospy.Rate(0.5)  # 1 Hz
+        rate = rospy.Rate(1)  # 1 Hz
+        # rate = rospy.Rate(2)  # 1 Hz
         idx=0
         while not rospy.is_shutdown():
             self.maze.step()
@@ -216,6 +219,34 @@ class MazeNode:
             idx += 1
 
             rate.sleep()
+
+    def path_callback(self, msg):
+        # poses = [[p.pose.position.x, p.pose.position.y, p.pose.position.z] \
+                # for p in msg.poses]
+        # qtrs = [[p.orientation.position.x, p.orientation.position.y, \
+                # p.orientation.position.z, p.orientation.w] \
+                # for p in msg.poses]
+
+        positions = []
+        orientations = []
+        
+        # Iterate through each pose in the Path message
+        for pose_stamped in msg.poses:
+            # Extract the position and orientation
+            pos = pose_stamped.pose.position
+            ori = pose_stamped.pose.orientation
+            
+            # Append to respective lists
+            positions.append((pos.x, pos.y, pos.z))
+            orientations.append((ori.x, ori.y, ori.z, ori.w))
+            # orientations.append([0., 0., 0., 1.])
+
+        
+        # print(f"plan received:{positions}")
+        self.maze.set_plan(positions, orientations)
+
+        # self.maze.step()
+
 
     def run(self):
         try:

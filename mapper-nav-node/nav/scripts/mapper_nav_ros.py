@@ -41,14 +41,15 @@ class MapperNavNode:
         rospy.init_node('mapper_nav', anonymous=True)
 
         self.bridge = CvBridge()
-        self.occupied_pub = rospy.Publisher('/occupied_space', PointCloud2, queue_size=3)
-        self.empty_pub = rospy.Publisher('/empty_space', PointCloud2, queue_size=3)
-        self.cam_path_pub = rospy.Publisher('/cam_path', Path, queue_size=10)
-        self.plan_path_pub = rospy.Publisher('/plan_path', Path, queue_size=10)
-        self.pose_pub = rospy.Publisher('/map_pose', PoseStamped, queue_size=10)
+        self.occupied_pub = rospy.Publisher('/occupied_space', PointCloud2, queue_size=1)
+        self.empty_pub = rospy.Publisher('/empty_space', PointCloud2, queue_size=1)
+        self.cam_path_pub = rospy.Publisher('/cam_path', Path, queue_size=1)
+        self.plan_path_pub = rospy.Publisher('/plan_path', Path, queue_size=1)
+        self.plan_map_path_pub = rospy.Publisher('/plan_map_path', Path, queue_size=1)
+        self.pose_pub = rospy.Publisher('/map_pose', PoseStamped, queue_size=1)
 
-        self.start_pub = rospy.Publisher('/nav_start', PointStamped, queue_size=10)
-        self.goal_pub = rospy.Publisher('/nav_goal', PointStamped, queue_size=10)
+        self.start_pub = rospy.Publisher('/nav_start', PointStamped, queue_size=1)
+        self.goal_pub = rospy.Publisher('/nav_goal', PointStamped, queue_size=1)
 
         self.depth_sub = rospy.Subscriber('/ground_truth/depth_with_pose', DepthWithPose, self.image_callback)
         self.depth_sub = rospy.Subscriber('/cam_pcd_pose', Pcd2WithPose, self.pcd_pose_callback)
@@ -91,17 +92,17 @@ class MapperNavNode:
 
         self.cam_path_pub.publish(path_msg)
 
-    def publish_plan_path_msg(self):
+    def publish_plan_path_msg(self, orig=True):
         path_msg = Path()
 
         path_msg.header = Header()
         path_msg.header.frame_id = "map"
         path_msg.header.stamp = rospy.Time.now()
 
-        # print(f"cam_poses={self.vmap.cam_poses}")
-        path = self.vmap.get_plan()
-        for pt in path:
+        path, qtrs = self.vmap.get_plan(orig_coord=orig)
+        for pt, qtr in zip(path, qtrs):
             (tx, ty, tz) = pt
+            (qx, qy, qz, qw) = qtr
 
             # Need to rotate 90 deg in Z axis
             # orig_qtr = R.from_quat(qtr)
@@ -117,17 +118,20 @@ class MapperNavNode:
             pose_stamped.pose.position.y = ty
             pose_stamped.pose.position.z = tz
 
-            pose_stamped.pose.orientation.x = 0
-            pose_stamped.pose.orientation.y = 0
-            pose_stamped.pose.orientation.z = 0
-            pose_stamped.pose.orientation.w = 1
+            pose_stamped.pose.orientation.x = qx
+            pose_stamped.pose.orientation.y = qy
+            pose_stamped.pose.orientation.z = qz
+            pose_stamped.pose.orientation.w = qw
 
             path_msg.poses.append(pose_stamped)
 
-        self.plan_path_pub.publish(path_msg)
+        if orig:
+            self.plan_path_pub.publish(path_msg)
+        else:
+            self.plan_map_path_pub.publish(path_msg)
 
     def publish_map_pose_msg(self):
-        (pt, qtr) = self.vmap.get_pose()
+        (pt, qtr) = self.vmap.get_pose(orig_coord=False)
         (tx, ty, tz) = pt
         (qx, qy, qz, qw) = qtr
 
@@ -151,7 +155,7 @@ class MapperNavNode:
 
 
     def publish_start_msg(self):
-        (x, y, z) = self.vmap.get_start()
+        (x, y, z) = self.vmap.get_start(orig_coord=False)
         point_msg = PointStamped()
         point_msg.header.stamp = rospy.Time.now()
         point_msg.header.frame_id = "map"  # Adjust to your frame of reference
@@ -159,7 +163,7 @@ class MapperNavNode:
         self.start_pub.publish(point_msg)
 
     def publish_goal_msg(self):
-        (x, y, z) = self.vmap.get_goal()
+        (x, y, z) = self.vmap.get_goal(orig_coord=False)
         point_msg = PointStamped()
         point_msg.header.stamp = rospy.Time.now()
         point_msg.header.frame_id = "map"  # Adjust to your frame of reference
@@ -185,6 +189,8 @@ class MapperNavNode:
         self.empty_pub.publish(pcd_msg)
 
     def pcd_pose_callback(self, msg):
+        # print(f"received data. press any key to continue")
+        # input()
         pcd = pointcloud2_to_array(msg.pcd)
 
         pos_pt = msg.position
@@ -215,9 +221,13 @@ class MapperNavNode:
 
         self.vmap.update(pcd, pos, qtr, is_glob_fame)
         
+        # print(f"press any key to send events")
+        # input()
+
         self.publish_start_msg()
         self.publish_goal_msg()
-        self.publish_plan_path_msg()
+        self.publish_plan_path_msg(orig=True) # Original scale
+        self.publish_plan_path_msg(orig=False) # Map scale
         self.publish_map_pose_msg()
         self.publish_occupied_space_msg()
         self.publish_empty_space_msg()
@@ -235,10 +245,10 @@ class MapperNavNode:
             tx = msg.position.x
             ty = msg.position.y
             tz = msg.position.z
-            qx= msg.orientation.x
-            qy= msg.orientation.y
-            qz= msg.orientation.z
-            qw= msg.orientation.w
+            qx = msg.orientation.x
+            qy = msg.orientation.y
+            qz = msg.orientation.z
+            qw = msg.orientation.w
 
             factor = 1
             self.vmap.add_pcd_from_depth_image((qx, qy, qz, qw), (tx, ty, tz), depth_map, 5, factor, fov=90)
