@@ -6,3 +6,4 @@ setup:
 3. roslaunch depth_estimation_package depth_estimation.launch
 
 cd /catkin_ws/src/depth_estimation_package && source /catkin_ws/devel/setup.bash && roslaunch depth_estimation_package depth_estimation.launch
+cd /catkin_ws/src/depth_estimation_package && source /catkin_ws/devel/setup.bash && roslaunch depth_estimation_package depth_estimationV2.launch

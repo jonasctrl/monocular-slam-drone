@@ -20,19 +20,33 @@ class AirSimDatafeedNode:
 
         self.sequence = 0
 
+    def ned_to_enu_position(self, position_ned):
+        """
+        Convert position from NED to ENU.
+        Swap x and y, and negate z.
+        """
+        return Point(
+            x=position_ned.y,
+            y=position_ned.x,
+            z=-position_ned.z
+        )
+
+    def ned_to_enu_orientation(self, orientation_ned):
+        """
+        Convert orientation (quaternion) from NED to ENU.
+        Swap x and y, and negate z.
+        """
+        return Quaternion(
+            x=orientation_ned.y,
+            y=orientation_ned.x,
+            z=-orientation_ned.z,
+            w=orientation_ned.w
+        )
+
     def get_camera_info(self):
         camera_info = self.client.simGetCameraInfo(CAMERA)
-        position = Point()
-        orientation = Quaternion()
-
-        position.x = camera_info.pose.position.x_val
-        position.y = camera_info.pose.position.y_val
-        position.z = camera_info.pose.position.z_val
-
-        orientation.x = camera_info.pose.orientation.x_val
-        orientation.y = camera_info.pose.orientation.y_val
-        orientation.z = camera_info.pose.orientation.z_val
-        orientation.w = camera_info.pose.orientation.w_val
+        position = self.ned_to_enu_position(camera_info.pose.position)
+        orientation = self.ned_to_enu_orientation(camera_info.pose.orientation)
 
         return position, orientation
 
@@ -64,7 +78,6 @@ class AirSimDatafeedNode:
 
     def publish_point_cloud_with_pose(self):
         try:
-            #
             response = self.client.simGetImages(
                 [airsim.ImageRequest(CAMERA, airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=False)])[0]
 
@@ -84,8 +97,9 @@ class AirSimDatafeedNode:
 
                         point = [x, y, z]
 
-                        rotated_point = self.rotate_point(point, axis='x', angle=270)
-                        point_cloud.append(rotated_point)
+                        rotated_point = self.rotate_point(point, axis='x', angle=90)
+                        enu_point = self.ned_to_enu_position(Point(rotated_point[0], rotated_point[1], rotated_point[2]))
+                        point_cloud.append([enu_point.x, enu_point.y, enu_point.z])
 
             # Create the point cloud message
             point_cloud_msg = PointCloud2()
