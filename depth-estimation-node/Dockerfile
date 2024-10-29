@@ -1,5 +1,5 @@
 # Use a CUDA-enabled base image for GPU support
-FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
+FROM nvidia/cuda:11.7.1-cudnn8-devel-ubuntu20.04
 
 ENV ROS_DISTRO=noetic
 ENV DEBIAN_FRONTEND=noninteractive
