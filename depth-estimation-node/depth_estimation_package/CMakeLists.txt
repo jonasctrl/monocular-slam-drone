@@ -14,6 +14,7 @@ add_message_files(
   FILES
   RGBWithPose.msg
   DepthWithPose.msg
+  Pcd2WithPose.msg
 )
 
 # Generate added messages

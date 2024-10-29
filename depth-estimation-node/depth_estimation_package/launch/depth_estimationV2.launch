@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="depth_estimation_package" type="estimatorV2.py" name="depth_estimation_node" output="screen" launch-prefix="python3" />
+     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find depth_estimation_package)/rviz/point_cloud.rviz" />
+</launch>

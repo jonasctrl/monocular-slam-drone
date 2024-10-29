@@ -5,13 +5,16 @@ import cv2
 import numpy as np
 from cv_bridge import CvBridge
 from depth_estimation_package.msg import RGBWithPose
+from depth_estimation_package.msg import Pcd2WithPose
 from modules.depth_anything_module import DepthAnythingEstimatorModule
 from sensor_msgs.msg import PointCloud2, PointField
+from std_msgs.msg import Bool
 import sensor_msgs.point_cloud2 as pc2
 import tf
 import math
 
 GUI = True
+
 
 class DepthEstimationNode:
     def __init__(self):
@@ -21,7 +24,9 @@ class DepthEstimationNode:
         self.depth_estimator_module = DepthAnythingEstimatorModule()
 
         self.image_sub = rospy.Subscriber('/rgb_with_pose', RGBWithPose, self.image_callback)
+        # Update publisher to use new message type and topic
         self.point_cloud_pub = rospy.Publisher('/point_cloud', PointCloud2, queue_size=1)
+        self.pcd_pose_pub = rospy.Publisher('/cam_pcd_pose', Pcd2WithPose, queue_size=1)
 
         # Initialize the TF broadcaster
         self.tf_broadcaster = tf.TransformBroadcaster()
@@ -62,10 +67,27 @@ class DepthEstimationNode:
             if GUI:
                 depth_display = cv2.normalize(depth_map, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
                 cv2.imshow("Depth Map", depth_display)
-                cv2.waitKey(1)  # Allows OpenCV to process the image window
+                cv2.waitKey(1)
 
             # Generate point cloud from depth map
             point_cloud_msg = self.generate_point_cloud(depth_map, msg.rgb_image.header)
+
+            # Create and publish Pcd2WithPose message
+            pcd_pose_msg = Pcd2WithPose()
+            pcd_pose_msg.pcd = point_cloud_msg
+
+            # Copy position and orientation from input message
+            pcd_pose_msg.position = msg.position
+            pcd_pose_msg.orientation = msg.orientation
+
+            # Set is_global_frame to False
+            pcd_pose_msg.is_global_frame = Bool(False)
+
+            # Publish the combined message
+            self.pcd_pose_pub.publish(pcd_pose_msg)
+            rospy.loginfo("Published Pcd2WithPose message")
+
+            # Publish the point cloud message
             self.point_cloud_pub.publish(point_cloud_msg)
             rospy.loginfo("Published point cloud message")
 
@@ -126,7 +148,7 @@ class DepthEstimationNode:
             orientation,
             rospy.Time.now(),
             'camera',  # Child frame
-            'map'      # Parent frame
+            'map'  # Parent frame
         )
 
     def run(self):

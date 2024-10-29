@@ -4,8 +4,9 @@ from transformers import pipeline
 from PIL import Image
 import numpy as np
 
-#default_model_type = "depth-anything/Depth-Anything-V2-Metric-Outdoor-Large-hf"
-default_model_type = "depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf"
+# MODELS:
+default_model_type = "depth-anything/Depth-Anything-V2-Metric-Outdoor-Large-hf"
+#default_model_type = "depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf"
 
 class DepthAnythingEstimatorModule:
     def __init__(self, model_type=default_model_type):
@@ -25,7 +26,6 @@ class DepthAnythingEstimatorModule:
 
     @torch.no_grad()
     def generate_depth_map(self, frame):
-        # Convert the OpenCV BGR frame to RGB (as required by the model)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         pil_image = Image.fromarray(frame_rgb)
 
@@ -36,7 +36,6 @@ class DepthAnythingEstimatorModule:
             print(f"Error in depth estimation: {str(e)}")
             return None
 
-        # Convert the depth map to a NumPy array (it should be float32 by default)
         depth_map = np.array(depth_map, dtype=np.float32)
 
         # No normalization needed, keep depth map in 32-bit float format (32FC1)

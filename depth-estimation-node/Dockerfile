@@ -1,5 +1,5 @@
 # Use a CUDA-enabled base image for GPU support
-FROM nvidia/cuda:11.7.1-cudnn8-devel-ubuntu20.04
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
 
 ENV ROS_DISTRO=noetic
 ENV DEBIAN_FRONTEND=noninteractive
@@ -34,7 +34,7 @@ RUN apt-get update && apt-get install -y \
 # Install pip and other dependencies
 RUN python3 -m pip install --upgrade pip
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
-RUN pip3 install transformers
+RUN pip3 install transformers==4.45.0
 
 # Setup ROS workspace
 RUN mkdir -p /catkin_ws/src
