@@ -91,7 +91,8 @@ def bresenham3d_raycast(p1, p2, voxels):
 
 
     # Add the final voxel (end point)
-    path.append((x2, y2, z2, voxels[x2, y2, z2]))
+    if in_bounds(voxels, x1, y1, z1):
+        path.append((x2, y2, z2, voxels[x2, y2, z2]))
 
     return path
 

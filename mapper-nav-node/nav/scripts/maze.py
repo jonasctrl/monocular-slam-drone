@@ -1,12 +1,13 @@
+
+from __future__ import annotations
 import numpy as np
 import random
 
-# import plotly.graph_objects as go
+from typing import Optional, Dict, List, Tuple
+
 from scipy.spatial.transform import Rotation as R
-from a_star import a_star_3d
 
 from utils import bresenham3d_raycast, quaternion_from_two_vectors
-# from utils import bresenham3d_check_known_space, depth_img_to_pcd
 
 import nav_config as cfg
 
@@ -16,13 +17,13 @@ def_cam_pos = [0,0,0]
 class Maze(object):
     def __init__(self, edge=300, height=50, num_obstacles=30):
         self.env_map = self.__generate_voxel_map_with_obstacles((edge, edge, height), num_obstacles=num_obstacles)
-        self.cur_pos = [10,50,5]
+        self.cur_pos:tuple = (10,50,5)
         # self.cur_pos = [0,0,0]
-        self.cur_qtr = [0,0,0,1]
-        self.pos_history = [self.cur_pos]
-        self.qtr_history = [self.cur_qtr]
-        self.pos_plan = []
-        self.qtr_plan = []
+        self.cur_qtr:tuple = (0,0,0,1)
+        self.pos_history:List[tuple] = [self.cur_pos]
+        self.qtr_history:List[tuple] = [self.cur_qtr]
+        self.pos_plan:List[tuple] = []
+        self.qtr_plan:List[tuple] = []
         self.glob_pcd = []
         self.cam_pcd = []
         self.cam_targets = []
@@ -85,10 +86,10 @@ class Maze(object):
             voxel_map[x_start:x_end, y_start:y_end, z_start:z_end] = 1
         
         voxel_map[:,:,0] = 1
-        # voxel_map[0,:,:] = 1
-        # voxel_map[x_size-1,:,:] = 1
-        # voxel_map[:,0,:] = 1
-        # voxel_map[:,y_size-1,:] = 1
+        voxel_map[0,:,:] = 1
+        voxel_map[x_size-1,:,:] = 1
+        voxel_map[:,0,:] = 1
+        voxel_map[:,y_size-1,:] = 1
         return voxel_map
 
     def get_map_as_pcd(self):
@@ -114,7 +115,7 @@ class Maze(object):
     def cam_collisions(self):
         qtr = R.from_quat(self.cur_qtr)
         inv_qtr = qtr.inv()
-        pos = np.array(self.cur_pos)
+        pos = np.array(self.cur_pos).astype(int)
         
         cam_targets = def_cam_target_pts.copy()
         cam_targets = cfg.cam_scaling * cam_targets
@@ -127,6 +128,7 @@ class Maze(object):
         # print(f"cam_targets:{cam_targets}")
         for ctg in cam_targets:
             # col = bresenham3d_raycast(pos, ctg, self.env_map, get_collision=True, update_unkn=False)
+            # print(f"casting {pos} to {ctg}")
             cols = bresenham3d_raycast(pos, ctg, self.env_map)
             cols = [(x, y, z) for i, (x, y, z, v) in enumerate(cols) if v != 0 and i + 1 < len(cols) ]
             if len(cols) > 0:
@@ -152,6 +154,10 @@ class Maze(object):
         # self.glob_pcd =  cam_pcd_kp
 
     def set_plan(self, new_pos_plan:list, new_qtr_plan:list):
+        # if len(new_pos_plan) > 0 and self.cur_pos == new_pos_plan[0]:
+            # new_pos_plan = new_pos_plan[1:]
+            # new_qtr_plan= new_qtr_plan[1:]
+        print(f"setting plan from {new_pos_plan[0]}")
         self.pos_plan = new_pos_plan
         self.qtr_plan = new_qtr_plan
 
@@ -161,16 +167,25 @@ class Maze(object):
 
     def step(self):
         if len(self.pos_plan) == 0:
-            pass
-            # print(f"No more planned steps")
+            # pass
+            print(f"No more planned steps")
             # return 
 
         if len(self.pos_plan):
-            self.cur_pos = self.pos_plan.pop(0)
-            # print(f"Steping to {self.cur_pos} q={self.cur_qtr}")
+            # If we are already on the path, do not restart from beginning
+            if self.cur_pos in self.pos_plan:
+                last_index = len(self.pos_plan) - 1 - self.pos_plan[::-1].index(self.cur_pos)
+                print(f"found existing {self.cur_pos} in path")
+                for _ in range(last_index + 1):
+                    self.pos_plan.pop(0)
+                    self.qtr_plan.pop(0)
 
+        if len(self.pos_plan):
+            self.cur_pos = self.pos_plan.pop(0)
         if len(self.qtr_plan):
             self.cur_qtr = self.qtr_plan.pop(0)
+
+        print(f"Steping to {self.cur_pos} next={self.pos_plan[0] if len(self.pos_plan) > 0 else 'None'}")
 
         self.pos_history.append(self.cur_pos) 
         self.qtr_history.append(self.cur_qtr) 

@@ -3,7 +3,6 @@ from __future__ import annotations
 import random
 import math
 import numpy as np
-import matplotlib.pyplot as plt
 from typing import Optional, Dict, List, Tuple
 
 STRA_COST = 1
@@ -13,17 +12,12 @@ BOTH_END = -1
 START_END = 0
 GOAL_END = 1
 
-CONN_NONE = 0
-CONN_FULL = 1
-CONN_CURRENT = 2
-CONN_OPOSITE = 3
-CONN_NOT_CURRENT = 3
-
 # random.seed(15)
 # random.seed(16)
 random.seed(17)
 
-DEBUG=1
+# DEBUG=1
+DEBUG=0
 
 def dbg(*args, **kwargs):
     if DEBUG != 0:
@@ -75,7 +69,6 @@ class Node:
         
         assert self.parent.children.get(self.pos) == self
 
-
     def connect_child(self, child:Node) -> None:
         assert child
         child.set_root()
@@ -83,33 +76,6 @@ class Node:
         self.children[child.pos] = child
 
         child.update_costs_rec()
-
-    # def set_node(self, parent, end):
-        
-        # self.parent[START_END] = parent
-        # parent.children[START_END][self.pos] = self
-
-        # self.parent[GOAL_END] = parent
-        # parent.children[GOAL_END][self.pos] = self
-
-        # self.update_costs_rec(end=end)
-        # inv_end = iend(end)
-        # if self.cost[inv_end] != float("inf"):
-            # self.update_costs_rec(end=inv_end)
-
-        
-
-    # def move_parent(self, new_parent, end):
-        # if self.is_root:
-            # return
-
-        # parent = self.parent
-        # if parent is not None:
-            # del parent.children[self.pos]
-
-        # self.parent = new_parent
-        # new_parent.children[self.pos] = self
-        # self.update_costs_rec(end=end)
 
     def breakoff(self) -> None:
         parent = self.parent
@@ -265,15 +231,25 @@ class DRRT:
         return True
     
     def add_obstacle(self, pos:tuple) -> None:
-        self.__delete_node(BOTH_END, pos)
-        self.obst_dict[pos] = 1
+        (x, y, v) = pos
+        ob_pos = (x, y)
+        if v == -1:
+            self.__delete_node(BOTH_END, ob_pos)
+            self.obst_dict[ob_pos] = 1
+        elif v == 0:
+            if self.obst_dict.get(ob_pos) is not None:
+                del self.obst_dict[ob_pos]
+        else:
+            raise Exception("Unsupported obstacle value:{v} should be 0 or -1")
 
     def update_obstacles(self, ob_list:List[tuple], clear:bool=False) -> None:
         if clear:
             self.obst_dict.clear()
 
         for o in ob_list:
-            if o != self.start.pos and o != self.goal.pos:
+            (x, y, v) = o
+            ob = (x, y)
+            if ob != self.start.pos and ob != self.goal.pos:
                 self.add_obstacle(o)
         self.__update_total_cost()
         self.__delete_orphans()
@@ -329,7 +305,7 @@ class DRRT:
 
         return path
 
-    def __get_path(self, bridge:Node, direction:int) -> List[Node]:
+    def ___get_node_path(self, bridge:Node, direction:int) -> List[Node]:
         f_node = self.forward_dict.get(bridge.pos)
         b_node = self.bacward_dict.get(bridge.pos)
         assert f_node is not None
@@ -358,14 +334,20 @@ class DRRT:
         else:
             raise Exception("Bad direction")
 
-    def get_path(self, bridge:Optional[Node]=None, direction:int=START_END) -> List[Node]:
+    def __get_node_path(self, bridge:Optional[Node]=None, direction:int=START_END) -> List[Node]:
         if bridge is None:
             bridge = self.main_bridge
 
         if bridge is None:
             return []
 
-        return self.__get_path(bridge, direction)
+        return self.___get_node_path(bridge, direction)
+
+    def get_path(self, bridge:Optional[Node]=None, direction:int=START_END) -> List[tuple]:
+        node_path = self.__get_node_path(bridge, direction)
+        path = [n.pos for n in node_path]
+
+        return path
 
     def __update_total_cost(self) -> None:
         # Reset costs to all nodes
@@ -421,12 +403,12 @@ class DRRT:
 
         return False
 
-    def plan(self, force_iters=None) -> List[Node]:
+    def plan(self, force_iters=None) -> bool:
         # Check for existing path
         if force_iters is None:
-            node_path = self.get_path()
+            node_path = self.__get_node_path()
             if len(node_path) > 0:
-                return node_path
+                return True
 
         for i in range(self.max_iter):
             status_ok  = self.__plan_step()
@@ -439,8 +421,20 @@ class DRRT:
 
         self.__optimize_bridge()
 
-        node_path = self.get_path()
-        return node_path
+        node_path = self.__get_node_path()
+        return len(node_path) != 0
+
+    def update_start(self, pos:tuple) -> bool:
+        if pos == self.goal.pos:
+            return False
+
+        return self.__set_new_root(pos, START_END)
+
+    def update_goal(self, pos:tuple) -> bool:
+        if pos == self.start.pos:
+            return False
+
+        return self.__set_new_root(pos, GOAL_END)
 
     def validate_nodes(self) -> None:
         # Check parent-child relations for forward_dict
@@ -482,12 +476,12 @@ class DRRT:
             assert n_roots == 1
 
     def plot(self, plot_path:bool=True) -> None:
+        import matplotlib.pyplot as plt
         f_nodes = self.forward_dict.values()
         b_nodes = self.bacward_dict.values()
         obstacle_list = self.obst_dict.keys()
         
-        node_path = self.get_path()
-        path = [n.pos for n in node_path]
+        path = self.get_path()
         
         fx_paths = []
         fy_paths = []
@@ -558,60 +552,45 @@ class DRRT:
         plt.axis("equal")
         plt.show()
 
-    def update_start(self, pos:tuple) -> bool:
-        if pos == self.goal.pos:
-            return False
-
-        return self.__set_new_root(pos, START_END)
-
-    def update_goal(self, pos:tuple) -> bool:
-        if pos == self.start.pos:
-            return False
-
-        return self.__set_new_root(pos, GOAL_END)
-
 
 if __name__ == "__main__":
     start = (7, 1)
     goal = (17, 17)
-    obstacle_list = [(10,9), (6, 9), (14, 10), (12, 9), (7, 8), (15, 11)]
+    obstacle_list = [(10,9, -1), (6, 9, -1), (14, 10, -1), (12, 9, -1), (7, 8, -1), (15, 11, -1)]
     shp = (20, 20)
 
-    m = DRRT(start, goal, shp, step_size=1, max_iter=200, goal_sample_rate=0.1)
-    path = m.plan()
+    m = DRRT(start, goal, shp, step_size=1, max_iter=200, goal_sample_rate=0.2)
+    m.plan()
     m.validate_nodes()
     # m.plot()
     m.update_obstacles(obstacle_list)  # Update the tree with the new obstacles
     m.validate_nodes()
-    path = m.plan()
+    m.plan()
     m.validate_nodes()
     # m.plot()
 
-    obstacle_list.append((7, 10))  # New obstacle
-    obstacle_list.append((12, 4))  # New obstacle
-    obstacle_list.append((13, 9))  # New obstacle
-    obstacle_list.append((8, 8))  # New obstacle
-    obstacle_list.append((7, 9))  # New obstacle
-    obstacle_list.append((8, 9))  # New obstacle
-    obstacle_list.append((9, 9))  # New obstacle
-    obstacle_list.append((11, 9))  # New obstacle
-    m.update_obstacles(obstacle_list)  # Update the tree with the new obstacles
+    obstacle_list.append((7, 10, -1))
+    obstacle_list.append((12, 4, -1))
+    obstacle_list.append((13, 9, -1))
+    obstacle_list.append((8, 8, -1))
+    obstacle_list.append((7, 9, -1))
+    obstacle_list.append((8, 9, -1))
+    obstacle_list.append((9, 9, -1))
+    obstacle_list.append((11, 9, -1))
+    m.update_obstacles(obstacle_list)
     # m.plot()
-    path = m.plan()
-    path = [n.pos for n in m.get_path()]
+    m.plan()
+    path = m.get_path()
     print(f"path={path}")
     # m.plot()
 
-    obstacle_list.append((10, 13))  # New obstacle
-    m.update_obstacles(obstacle_list)  # Update the tree with the new obstacles
+    obstacle_list.append((10, 13, -1))
+    m.update_obstacles(obstacle_list)
     # m.plot()
-    path = m.plan()
-    # path = [n.pos for n in m.get_path()[0]]
-    # print(f"path={path}")
-    # m.plot()
+    m.plan()
 
     for _ in range(50):
-        path = m.plan(force_iters=20)
+        m.plan(force_iters=20)
         m.validate_nodes()
         # m.plot()
 
@@ -631,32 +610,27 @@ if __name__ == "__main__":
             dbg(f"status={'OK' if status else 'FAIL'}")
 
         m.validate_nodes()
-        path = m.plan()
+        m.plan()
 
         list_length = random.randint(5, 100)
         random_tuples = [(random.randint(0, shp[0]-1), \
-                random.randint(0, shp[1]-1)) for _ in range(list_length)]
+                random.randint(0, shp[1]-1), random.randint(-1,0)) for _ in range(list_length)]
         
         m.update_obstacles(random_tuples, clear=True)  # Update the tree with the new obstacles
         m.validate_nodes()
-        path = m.plan(force_iters=random.randint(0, 200))
+        m.plan(force_iters=random.randint(0, 200))
         # m.plot()
         m.validate_nodes()
-        path = m.plan()
+        m.plan()
         m.validate_nodes()
 
         list_length = random.randint(5, 150)
         random_tuples = [(random.randint(0, shp[0]-1), \
-                random.randint(0, shp[1]-1)) for _ in range(list_length)]
+                random.randint(0, shp[1]-1), random.randint(-1,0)) for _ in range(list_length)]
 
         m.update_obstacles(random_tuples, clear=False)  # Update the tree with the new obstacles
-        path = m.plan()
+        m.plan()
         m.validate_nodes()
-        
-        # m.plot()
-        
-    # m.validate_nodes()
-    # m.plot()
         
         
         
