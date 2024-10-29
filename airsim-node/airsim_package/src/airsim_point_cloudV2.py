@@ -2,14 +2,14 @@ import rospy
 from geometry_msgs.msg import Point, Quaternion
 from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Bool
+from airsim_package.msg import Pcd2WithPose
 import airsim
 import numpy as np
 import math
 
-from airsim_package.msg import Pcd2WithPose
-
 CAMERA = "front-center"
-RATE = 10
+RATE = 5
+HEIGHT, WIDTH = 144, 256
 
 class AirSimDatafeedNode:
 
@@ -20,6 +20,7 @@ class AirSimDatafeedNode:
         self.client.confirmConnection()
 
         self.cam_pcd_pose_pub = rospy.Publisher('/cam_pcd_pose', Pcd2WithPose, queue_size=1)
+        self.pointcloud_pub = rospy.Publisher('/point_cloud', PointCloud2, queue_size=1)
 
         self.sequence = 0
 
@@ -75,21 +76,22 @@ class AirSimDatafeedNode:
                                         [math.sin(rotation_angle), math.cos(rotation_angle), 0],
                                         [0, 0, 1]])
 
-        # Apply the rotation
         rotated_point = np.dot(rotation_matrix, np.array([x, y, z]))
         return rotated_point
 
     def publish_point_cloud_with_pose(self):
         try:
+            # Get camera position and orientation
+            position, orientation = self.get_camera_info()
+
             response = self.client.simGetImages(
                 [airsim.ImageRequest(CAMERA, airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=False)])[0]
 
             depth_data = np.array(response.image_data_float, dtype=np.float32).reshape(response.height, response.width)
 
-            fx, fy = 256, 144
+            fx, fy = WIDTH, HEIGHT
             cx, cy = response.width / 2, response.height / 2
 
-            # Compute 3D points from the depth map
             point_cloud = []
             for v in range(response.height):
                 for u in range(response.width):
@@ -124,9 +126,7 @@ class AirSimDatafeedNode:
             pcd_msg.is_dense = True
 
             pcd_msg.data = np.asarray(point_cloud, np.float32).tobytes()
-
-            # Get camera position and orientation
-            position, orientation = self.get_camera_info()
+            #self.pointcloud_pub.publish(pcd_msg)
 
             # Create Pcd2WithPose message
             pcd2_with_pose_msg = Pcd2WithPose()
