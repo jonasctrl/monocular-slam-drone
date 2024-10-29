@@ -44,14 +44,14 @@ class MapperNavNode:
         self.occupied_pub = rospy.Publisher('/occupied_space', PointCloud2, queue_size=1)
         self.empty_pub = rospy.Publisher('/empty_space', PointCloud2, queue_size=1)
         self.cam_path_pub = rospy.Publisher('/cam_path', Path, queue_size=1)
-        self.plan_path_pub = rospy.Publisher('/plan_path', Path, queue_size=10)
-        self.plan_map_path_pub = rospy.Publisher('/plan_map_path', Path, queue_size=10)
+        self.plan_path_pub = rospy.Publisher('/plan_path', Path, queue_size=1)
+        self.plan_map_path_pub = rospy.Publisher('/plan_map_path', Path, queue_size=1)
         self.pose_pub = rospy.Publisher('/map_pose', PoseStamped, queue_size=1)
 
         self.start_pub = rospy.Publisher('/nav_start', PointStamped, queue_size=1)
         self.goal_pub = rospy.Publisher('/nav_goal', PointStamped, queue_size=1)
 
-        self.depth_sub = rospy.Subscriber('/ground_truth/depth_with_pose', DepthWithPose, self.image_callback)
+        # self.depth_sub = rospy.Subscriber('/ground_truth/depth_with_pose', DepthWithPose, self.image_callback)
         self.depth_sub = rospy.Subscriber('/cam_pcd_pose', Pcd2WithPose, self.pcd_pose_callback)
 
         rospy.loginfo("Mapper-Navigation node initialized.")
@@ -191,6 +191,9 @@ class MapperNavNode:
     def pcd_pose_callback(self, msg):
         # print(f"received data. press any key to continue")
         # input()
+        
+        t0 = time.time()
+        
         pcd = pointcloud2_to_array(msg.pcd)
 
         pos_pt = msg.position
@@ -201,6 +204,7 @@ class MapperNavNode:
 
         is_glob_fame = msg.is_global_frame.data
 
+        t1 = time.time()
         # global g_num
         # if g_num == 0:
             # print()
@@ -221,21 +225,26 @@ class MapperNavNode:
 
         ch_pts = self.vmap.update(pcd, pos, qtr, is_glob_fame)
         
+        t2 = time.time()
         # print(f"press any key to send events")
         # input()
 
         self.publish_occupied_space_msg()
-        self.publish_empty_space_msg()
+        # self.publish_empty_space_msg()
         
-        self.vmap.plan(ch_pts)
+        # self.vmap.plan(ch_pts)
 
 
-        self.publish_map_pose_msg()
-        self.publish_cam_path_msg()
-        self.publish_start_msg()
-        self.publish_goal_msg()
-        self.publish_plan_path_msg(orig=True) # Original scale
-        self.publish_plan_path_msg(orig=False) # Map scale
+        # self.publish_map_pose_msg()
+        # self.publish_cam_path_msg()
+        # self.publish_start_msg()
+        # self.publish_goal_msg()
+        # self.publish_plan_path_msg(orig=True) # Original scale
+        # self.publish_plan_path_msg(orig=False) # Map scale
+
+        t3 = time.time()
+
+        print(f"inti:{t1-t0} mapping:{t2-t1} pub:{t3-t2}")
 
 
     def image_callback(self, msg):

@@ -5,15 +5,17 @@ occup_max = 12
 occup_thr = 8
 # occup_thr = 5
 
-ray_miss_incr = -1
+ray_miss_incr = -3
 ray_hit_incr = 5
 
 
+map_resolution = 0.5
 # map_resolution = 1
+# map_resolution = 1.5
 # map_resolution = 2
 # map_resolution = 2.89
 # map_resolution = 3
-map_resolution = 4
+# map_resolution = 4
 # map_resolution = 8
 
 travel_off = (20, 5, 2) 

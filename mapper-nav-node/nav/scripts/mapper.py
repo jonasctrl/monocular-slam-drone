@@ -150,7 +150,7 @@ class VoxArray:
 
     def get_plan(self, orig_coord=True):
         if len(self.plan_path) == 0:
-            print(f"No plan path")
+            # print(f"No plan path")
             return [], []
         if orig_coord:
             orig_path = self.point_from_map(np.array(self.plan_path))
@@ -206,6 +206,34 @@ class VoxArray:
         # Convert camera point to point in local voxel map
         # c = (np.array([cam_pos])/ self.res).astype(int) + self.cntr - self.init_off 
         # c = np.clip(c, self.bgn, self.shp-1).astype(int)
+        
+        
+        (tx, ty, tz) = cam_pos
+        cam_pos = (ty, tx, -tz)
+
+        # (tx, ty, tz) = cam_pos
+        # cam_pos = (tx, ty, -tz)
+        
+        
+        # (qx, qy, qz, qw) = cam_qtr
+        # cam_qtr = (qy, qx, -qz, qw)
+
+        # (qx, qy, qz, qw) = cam_qtr
+        # cam_qtr = (qx, qy, -qz, qw)
+
+
+        # pcd2= pcd.copy()
+
+        # px = pcd2[:,0]
+        # py = pcd2[:,1]
+        # pz = pcd2[:,2]
+
+        # pcd[:,0] = py
+        # pcd[:,1] = px
+        # pcd[:,2] = -pz
+
+        pcd = [(y, x, -z) for (x, y, z) in pcd]
+        
 
         c = tuple(self.point_to_map(np.array([cam_pos]))[0])
 
@@ -239,10 +267,11 @@ class VoxArray:
         self.cam_path.append(c)
         self.cam_path_acc.append(c)
 
-        print(f"settin pos to {tuple(self.point_from_map(c)[0])}")
+        # print(f"settin pos to {tuple(self.point_from_map(c)[0])}")
         self.pos = c
         self.qtr = cam_qtr
         
+
         
         if not is_glob_fame:
             qtr = R.from_quat(cam_qtr)
