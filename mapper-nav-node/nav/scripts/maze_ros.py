@@ -38,7 +38,7 @@ class MazeNode:
         self.maze_pub = rospy.Publisher('/maze_map', PointCloud2, queue_size=1)
         self.cam_path_pub = rospy.Publisher('/path_hist', Path, queue_size=1)
         # self.depth_pub = rospy.Publisher('/depth_with_pose', DepthWithPose, queue_size=10)
-        self.pcd2_pose_pub = rospy.Publisher('/cam_pcd_pose', Pcd2WithPose, queue_size=1)
+        self.pcd2_pose_pub = rospy.Publisher('/cam_pcd_pose', Pcd2WithPose, queue_size=10)
         self.cam_pcd_pub = rospy.Publisher('/cam_pcd', PointCloud2, queue_size=1)
         self.pose_pub = rospy.Publisher('/cam_pose', PoseStamped, queue_size=1)
         self.pub_status = rospy.Publisher('/status', String, queue_size=1)

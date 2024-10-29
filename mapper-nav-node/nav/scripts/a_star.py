@@ -31,7 +31,10 @@ def get_neighbors(node, grid):
                         if abs(dx) + abs(dy) == 2:
                             if not v_empty(grid[x, y, new_z]) or \
                                 not v_empty(grid[new_x, y, z]) or \
-                                    not v_empty(grid[x, y, new_z]):
+                                not v_empty(grid[x, y, new_z]) or \
+                                not v_empty(grid[x, new_y, new_z]) or \
+                                not v_empty(grid[new_x, y, new_z]) or \
+                                not v_empty(grid[new_x, new_y, z]):
                                 continue
                     elif diag_num == 2:
                         if abs(dx) + abs(dy) == 2:
@@ -71,11 +74,17 @@ def a_star_3d(grid, start, goal):
     # Dictionary to store the total estimated cost (f = g + h)
     f_cost = {start: heuristic(start, goal)}
     
+    # iters = 0
+    # max_iters = 50
     while open_list:
         # Get the node with the lowest f_cost
         current_f_cost, current_node = heapq.heappop(open_list)
         
         # If the goal is reached, reconstruct the path
+        
+        # iters += 1
+        # if iters > max_iters or current_node == goal:
+            # print(f"path of {iters} iters cost={current_f_cost}")
         if current_node == goal:
             path = []
             while current_node:

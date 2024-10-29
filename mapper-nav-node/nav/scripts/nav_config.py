@@ -11,9 +11,12 @@ ray_hit_incr = 5
 
 # map_resolution = 1
 # map_resolution = 2
+# map_resolution = 2.89
+# map_resolution = 3
 map_resolution = 4
 # map_resolution = 8
 
+travel_off = (20, 5, 2) 
 
 cam_w = 18
 cam_h = 12

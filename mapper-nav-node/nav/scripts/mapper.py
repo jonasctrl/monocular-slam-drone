@@ -104,7 +104,10 @@ class VoxArray:
 
         # travel_off = np.array([3, 2, 0])
         # travel_off = np.array([7, 2, 0])
-        travel_off = np.array([20, 5, 0])
+        # travel_off = np.array([20, 5, 2])
+        # travel_off = np.array([31, -15, 2])
+        # travel_off = np.array([32, 7, 4])
+        travel_off = np.array(cfg.travel_off)
         self.goal:tuple = tuple((np.array(self.start) + travel_off).astype(int))
 
         self.pos:tuple = self.start
@@ -252,6 +255,12 @@ class VoxArray:
         ch_pts = self.add_pcd(pcd, c)
         
         # self.plan_drrt(cam_pos, ch_pts)
+        
+        return ch_pts
+
+        
+
+    def plan(self, ch_pts):
         self.start = self.pos
         self.plan_a_star(ch_pts)
         
@@ -291,6 +300,9 @@ class VoxArray:
             p_diff = p2 - p1
             qtr = quaternion_from_two_vectors(np.array([1, 0, 0]), p_diff)
             nav_qtrs.append(tuple(qtr))
+            if i + i == len(self.plan_path):
+                nav_qtrs.append(tuple(qtr))
+
 
         self.plan_qtrs = nav_qtrs
         
@@ -298,9 +310,9 @@ class VoxArray:
         
 
     def plan_a_star(self, ch_pts):
-        if self.__is_on_path(self.pos):
-            if not self.__do_obst_interfere(self.plan_path, ch_pts):
-                return 
+        # if self.__is_on_path(self.pos):
+            # if not self.__do_obst_interfere(self.plan_path, ch_pts):
+                # return 
 
         # print(f"start={self.start} pos={self.pos}")
         # print(f"new plan {self.start} => {self.goal}")

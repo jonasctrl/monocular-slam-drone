@@ -44,8 +44,8 @@ class MapperNavNode:
         self.occupied_pub = rospy.Publisher('/occupied_space', PointCloud2, queue_size=1)
         self.empty_pub = rospy.Publisher('/empty_space', PointCloud2, queue_size=1)
         self.cam_path_pub = rospy.Publisher('/cam_path', Path, queue_size=1)
-        self.plan_path_pub = rospy.Publisher('/plan_path', Path, queue_size=1)
-        self.plan_map_path_pub = rospy.Publisher('/plan_map_path', Path, queue_size=1)
+        self.plan_path_pub = rospy.Publisher('/plan_path', Path, queue_size=10)
+        self.plan_map_path_pub = rospy.Publisher('/plan_map_path', Path, queue_size=10)
         self.pose_pub = rospy.Publisher('/map_pose', PoseStamped, queue_size=1)
 
         self.start_pub = rospy.Publisher('/nav_start', PointStamped, queue_size=1)
@@ -219,20 +219,23 @@ class MapperNavNode:
             # print()
         # g_num+=1
 
-        self.vmap.update(pcd, pos, qtr, is_glob_fame)
+        ch_pts = self.vmap.update(pcd, pos, qtr, is_glob_fame)
         
         # print(f"press any key to send events")
         # input()
 
+        self.publish_occupied_space_msg()
+        self.publish_empty_space_msg()
+        
+        self.vmap.plan(ch_pts)
+
+
+        self.publish_map_pose_msg()
+        self.publish_cam_path_msg()
         self.publish_start_msg()
         self.publish_goal_msg()
         self.publish_plan_path_msg(orig=True) # Original scale
         self.publish_plan_path_msg(orig=False) # Map scale
-        self.publish_map_pose_msg()
-        self.publish_occupied_space_msg()
-        self.publish_empty_space_msg()
-        self.publish_cam_path_msg()
-
 
 
     def image_callback(self, msg):
