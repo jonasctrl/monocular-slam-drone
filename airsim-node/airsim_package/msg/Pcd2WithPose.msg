@@ -1,0 +1,4 @@
+sensor_msgs/PointCloud2 pcd
+geometry_msgs/Point position
+geometry_msgs/Quaternion orientation
+std_msgs/Bool is_global_frame
