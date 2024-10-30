@@ -93,10 +93,11 @@ class AirSimDatafeedNode:
             cx, cy = response.width / 2, response.height / 2
 
             max_depth = 30
+            stride = 2
             # Compute 3D points from the depth map
             point_cloud = []
-            for v in range(response.height):
-                for u in range(response.width):
+            for v in range(0, response.height, stride):
+                for u in range(0, response.width, stride):
                     z = depth_data[v, u]
                     if z > 0 and z < max_depth:
                         x = (u - cx) * z / fx

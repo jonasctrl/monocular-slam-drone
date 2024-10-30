@@ -28,7 +28,8 @@ def iend(end):
 
 class Node:
     def __init__(self, pos):
-        self.pos: tuple = (int(pos[0]), int(pos[1]))
+        self.pos: tuple = (int(pos[0]), int(pos[1]), int(pos[2]))
+        # self.pos: tuple = pos
 
         self.is_root:bool = False
         self.parent: Optional['Node'] = None
@@ -231,8 +232,8 @@ class DRRT:
         return True
     
     def add_obstacle(self, pos:tuple) -> None:
-        (x, y, v) = pos
-        ob_pos = (x, y)
+        (x, y, z, v) = pos
+        ob_pos = (x, y, z)
         if v == -1:
             self.__delete_node(BOTH_END, ob_pos)
             self.obst_dict[ob_pos] = 1
@@ -247,8 +248,8 @@ class DRRT:
             self.obst_dict.clear()
 
         for o in ob_list:
-            (x, y, v) = o
-            ob = (x, y)
+            (x, y, z, v) = o
+            ob = (x, y, z)
             if ob != self.start.pos and ob != self.goal.pos:
                 self.add_obstacle(o)
         self.__update_total_cost()
@@ -264,11 +265,12 @@ class DRRT:
             while True:
                 r_x = random.randint(0, self.shp[0])
                 r_y = random.randint(0, self.shp[1])
+                r_z = random.randint(0, self.shp[1])
                 pos = self.goal.pos if end == GOAL_END else self.start.pos
-                if not (pos == (r_x, r_y) and len(self.node_dict[end]) == 1):
+                if not (pos == (r_x, r_y, r_z) and len(self.node_dict[end]) == 1):
                     break
 
-            return Node((r_x, r_y))
+            return Node((r_x, r_y, r_z))
 
     def __get_nearest_conn_node(self, random_node:Node, end:int) -> Node:
         dists = [(random_node.dist_to(node), node) \
@@ -285,7 +287,7 @@ class DRRT:
         vec = to_pos - from_pos
         distance = max(np.abs(vec))
         sq_off = vec * self.step_size / distance
-        pos_off = np.array([0,0])
+        pos_off = np.array([0,0,0])
         for i, p in enumerate(sq_off):
             if p > 0.333:
                 pos_off[i] = 1

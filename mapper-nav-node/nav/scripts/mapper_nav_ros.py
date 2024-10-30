@@ -128,6 +128,7 @@ class MapperNavNode:
         if orig:
             self.plan_path_pub.publish(path_msg)
         else:
+            # print(f"path_msg={path_msg}")
             self.plan_map_path_pub.publish(path_msg)
 
     def publish_map_pose_msg(self):
@@ -229,47 +230,59 @@ class MapperNavNode:
         # print(f"press any key to send events")
         # input()
 
-        self.publish_occupied_space_msg()
-        # self.publish_empty_space_msg()
         
-        # self.vmap.plan(ch_pts)
-
-
-        # self.publish_map_pose_msg()
-        # self.publish_cam_path_msg()
-        # self.publish_start_msg()
-        # self.publish_goal_msg()
-        # self.publish_plan_path_msg(orig=True) # Original scale
-        # self.publish_plan_path_msg(orig=False) # Map scale
-
-        t3 = time.time()
-
-        print(f"inti:{t1-t0} mapping:{t2-t1} pub:{t3-t2}")
-
-
-    def image_callback(self, msg):
-        rospy.loginfo("Received DepthithPose message")
-
-        try:
-            depth_map = self.bridge.imgmsg_to_cv2(msg.depth_image, desired_encoding='32FC1')
-            rospy.loginfo(f"Image size: {depth_map.shape}")
-
-            tx = msg.position.x
-            ty = msg.position.y
-            tz = msg.position.z
-            qx = msg.orientation.x
-            qy = msg.orientation.y
-            qz = msg.orientation.z
-            qw = msg.orientation.w
-
-            factor = 1
-            self.vmap.add_pcd_from_depth_image((qx, qy, qz, qw), (tx, ty, tz), depth_map, 5, factor, fov=90)
-
+        if cfg.publish_occup:
             self.publish_occupied_space_msg()
+
+        if cfg.publish_empty:
+            self.publish_empty_space_msg()
+        
+        t3 = time.time()
+        self.vmap.plan(ch_pts)
+        t4 = time.time()
+
+
+        if cfg.publish_pose:
+            self.publish_map_pose_msg()
+
+
+        if cfg.publish_path:
             self.publish_cam_path_msg()
 
-        except Exception as e:
-            rospy.logerr(f"Error processing image: {str(e)}")
+        if cfg.publish_plan:
+            self.publish_start_msg()
+            self.publish_goal_msg()
+            self.publish_plan_path_msg(orig=False) # Map scale
+            # self.publish_plan_path_msg(orig=True) # Original scale
+
+        t5 = time.time()
+
+        print(f"init:{round(t1-t0, 4)} mapping:{round(t2-t1, 4)} pub1:{round(t3-t2, 4)} plan:{round(t4-t3, 4)} pub2:{round(t5-t4, 4)}")
+
+
+    # def image_callback(self, msg):
+        # rospy.loginfo("Received DepthithPose message")
+
+        # try:
+            # depth_map = self.bridge.imgmsg_to_cv2(msg.depth_image, desired_encoding='32FC1')
+            # rospy.loginfo(f"Image size: {depth_map.shape}")
+
+            # tx = msg.position.x
+            # ty = msg.position.y
+            # tz = msg.position.z
+            # qx = msg.orientation.x
+            # qy = msg.orientation.y
+            # qz = msg.orientation.z
+            # qw = msg.orientation.w
+
+            # factor = 1
+            # self.vmap.add_pcd_from_depth_image((qx, qy, qz, qw), (tx, ty, tz), depth_map, 5, factor, fov=90)
+
+            # self.publish_occupied_space_msg()
+            # self.publish_cam_path_msg()
+
+        # except Exception as e:
+            # rospy.logerr(f"Error processing image: {str(e)}")
 
     def run(self):
         try:
