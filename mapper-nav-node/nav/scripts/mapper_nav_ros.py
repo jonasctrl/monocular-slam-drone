@@ -52,7 +52,7 @@ class MapperNavNode:
         self.goal_pub = rospy.Publisher('/nav_goal', PointStamped, queue_size=1)
 
         # self.depth_sub = rospy.Subscriber('/ground_truth/depth_with_pose', DepthWithPose, self.image_callback)
-        self.depth_sub = rospy.Subscriber('/cam_pcd_pose', Pcd2WithPose, self.pcd_pose_callback)
+        self.depth_sub = rospy.Subscriber('/cam_pcd_pose', Pcd2WithPose, self.pcd_pose_callback, queue_size=1)
 
         rospy.loginfo("Mapper-Navigation node initialized.")
 
