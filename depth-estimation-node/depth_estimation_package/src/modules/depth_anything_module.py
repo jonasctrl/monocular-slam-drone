@@ -38,6 +38,5 @@ class DepthAnythingEstimatorModule:
 
         depth_map = np.array(depth_map, dtype=np.float32)
 
-        # No normalization needed, keep depth map in 32-bit float format (32FC1)
         return depth_map
 
