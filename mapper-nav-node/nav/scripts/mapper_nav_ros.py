@@ -52,7 +52,8 @@ class MapperNavNode:
         self.goal_pub = rospy.Publisher('/nav_goal', PointStamped, queue_size=1)
 
         # self.depth_sub = rospy.Subscriber('/ground_truth/depth_with_pose', DepthWithPose, self.image_callback)
-        self.depth_sub = rospy.Subscriber('/cam_pcd_pose', Pcd2WithPose, self.pcd_pose_callback)
+        self.depth_sub = rospy.Subscriber('/cam_pcd_pose', Pcd2WithPose, self.pcd_pose_callback, queue_size=1)
+        self.goal_sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.goal_callback, queue_size=1)
 
         rospy.loginfo("Mapper-Navigation node initialized.")
 
@@ -188,6 +189,14 @@ class MapperNavNode:
         pcd_msg = pc2.create_cloud_xyz32(header, points)
 
         self.empty_pub.publish(pcd_msg)
+
+    def goal_callback(self, msg):
+        position = msg.pose.position
+        # pos = tuple(np.array([position.x, position.y, position.z]).astype(int))
+        pos = tuple(np.array([position.x, position.y, 77]).astype(int))
+        self.vmap.set_goal(pos, update_start=True)
+
+
 
     def pcd_pose_callback(self, msg):
         # print(f"received data. press any key to continue")

@@ -47,10 +47,10 @@ cam_scaling = 8
 #  path_finding  #
 ##################
 
-travel_off = (20, 5, 2) 
+# travel_off = (20, 5, 2) 
 # travel_off = (0, 0, 10) 
 # travel_off = (0, 5, 0) 
-# travel_off = (0, 0, 0) 
+travel_off = (0, 0, 0) 
 
 use_drrt = False
 use_a_star = True
