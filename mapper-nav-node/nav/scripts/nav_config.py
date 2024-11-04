@@ -23,9 +23,9 @@ ray_hit_incr = 7
 
 
 # map_resolution = 0.5
-# map_resolution = 1
+map_resolution = 1
 # map_resolution = 1.5
-map_resolution = 2
+# map_resolution = 2
 # map_resolution = 2.89
 # map_resolution = 3
 # map_resolution = 4
@@ -48,6 +48,9 @@ cam_scaling = 8
 ##################
 
 travel_off = (20, 5, 2) 
+# travel_off = (0, 0, 10) 
+# travel_off = (0, 5, 0) 
+# travel_off = (0, 0, 0) 
 
 use_drrt = False
 use_a_star = True
@@ -57,7 +60,8 @@ use_a_star = True
 #  publishing  #
 ################
 
-publish_occup = False
+# publish_occup = False
+publish_occup = True
 publish_empty = False
 
 publish_pose = True

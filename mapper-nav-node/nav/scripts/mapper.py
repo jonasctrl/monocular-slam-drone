@@ -194,9 +194,9 @@ class VoxArray:
     def point_to_map_acc(self, pt):
         pt_downscaled = (pt / self.res)
 
-        if not self.has_init_off:
-            self.has_init_off = True
-            self.init_off = pt_downscaled.copy()
+        # if not self.has_init_off:
+            # self.has_init_off = True
+            # self.init_off = pt_downscaled.copy()
 
         pt_offsetted = pt_downscaled + self.cntr - self.init_off 
         pt_clipped = np.clip(pt_offsetted, self.bgn, self.shp-1)
@@ -205,15 +205,6 @@ class VoxArray:
         return pt_rounded
 
     def point_to_map(self, pt):
-        # pt_downscaled = (pt / self.res)
-
-        # if not self.has_init_off:
-            # self.has_init_off = True
-            # self.init_off = pt_downscaled.copy()
-
-        # pt_offsetted = pt_downscaled + self.cntr - self.init_off 
-        # pt_clipped = np.clip(pt_offsetted, self.bgn, self.shp-1)
-        
         pt_clipped = self.point_to_map_acc(pt)
         pt_rounded = np.round(pt_clipped).astype(int)
         
@@ -223,6 +214,10 @@ class VoxArray:
         # Convert camera point to point in local voxel map
         # c = (np.array([cam_pos])/ self.res).astype(int) + self.cntr - self.init_off 
         # c = np.clip(c, self.bgn, self.shp-1).astype(int)
+
+        if not self.has_init_off:
+            self.has_init_off = True
+            self.init_off = np.array([cam_pos]) / self.res
         
         
         (tx, ty, tz) = cam_pos
@@ -273,23 +268,6 @@ class VoxArray:
         # c_acc = np.clip(c_acc, self.bgn, self.shp-1)
         # c_acc = c_acc[0]
 
-        # On first "update" call move camera to center of map
-        # if not self.has_init_off:
-            # self.has_init_off = True
-            # self.init_off = c_acc - self.cntr
-            # c = c - self.init_off
-            # c_acc = c_acc - self.init_off
-
-
-        # Point along the path
-        # if len(self.cam_path_acc) > 0:
-            # p1 = np.array(self.cam_path_acc[-1])
-            # p2 = np.array(cam_pos)
-            # p_diff = p2 - p1
-            # qtr = quaternion_from_two_vectors(np.array([1, 0, 0]), p_diff)
-        # else:
-            # qtr = [0, 0, 0, 1]
-
         # Add position and quaterion to camera positions and orientations
         self.cam_qtrs.append(cam_qtr)
         self.cam_path.append(c)
@@ -334,10 +312,10 @@ class VoxArray:
         # print(f"is {c} in this path:{self.plan_path}")
         for p in self.plan_path:
             if p == c:
-                print(f"{c} is on the path")
+                # print(f"{c} is on the path")
                 return True
 
-        print(f"{c} is NOT on the path")
+        # print(f"{c} is NOT on the path")
         # print(f"path={self.plan_path}")
         return False
 
@@ -351,7 +329,7 @@ class VoxArray:
 
         interf = len(common) > 0
 
-        print(f"interference={interf}")
+        # print(f"interference={interf}")
         
         return interf
 

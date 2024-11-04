@@ -32,6 +32,7 @@ RUN apt-get update && \
 
 RUN pip3 install msgpack-rpc-python
 RUN pip3 install airsim
+RUN pip3 install scipy
 
 RUN mkdir -p /catkin_ws/src
 WORKDIR /catkin_ws/src

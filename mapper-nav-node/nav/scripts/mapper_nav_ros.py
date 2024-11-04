@@ -253,7 +253,7 @@ class MapperNavNode:
             self.publish_start_msg()
             self.publish_goal_msg()
             self.publish_plan_path_msg(orig=False) # Map scale
-            # self.publish_plan_path_msg(orig=True) # Original scale
+            self.publish_plan_path_msg(orig=True) # Original scale
 
         t5 = time.time()
 
