@@ -193,7 +193,7 @@ class MapperNavNode:
     def goal_callback(self, msg):
         position = msg.pose.position
         # pos = tuple(np.array([position.x, position.y, position.z]).astype(int))
-        pos = tuple(np.array([position.x, position.y, 77]).astype(int))
+        pos = tuple(np.array([position.x, position.y, 30]).astype(int))
         self.vmap.set_goal(pos, update_start=True)
 
 

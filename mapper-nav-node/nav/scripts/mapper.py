@@ -88,7 +88,7 @@ class VoxArray:
         self.shp = np.array(shape).astype(int)
         self.cntr = np.array([0.5*shape[0],
                               0.5*shape[1],
-                              0.25*shape[2]]).astype(int)
+                              0.1*shape[2]]).astype(int)
 
         self.res = resolution
         self.bgn = np.array([0, 0, 0]).astype(int)
@@ -258,6 +258,7 @@ class VoxArray:
             qtr = R.from_quat(cam_qtr)
             # inv_qtr = qtr.inv()
             pcd = np.array(pcd)
+            print(f"{pcd}")
             pcd = qtr.apply(pcd)
             # pcd = inv_qtr.apply(pcd)
             pcd = pcd + np.array(cam_pos)

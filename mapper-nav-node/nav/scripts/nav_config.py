@@ -4,7 +4,7 @@
 #############
 map_depth = 600
 map_width = 600
-map_heigth = 200
+map_heigth = 100
 
 # map_depth = 300
 # map_width = 300
@@ -23,9 +23,9 @@ ray_hit_incr = 7
 
 
 # map_resolution = 0.5
-map_resolution = 1
+# map_resolution = 1
 # map_resolution = 1.5
-# map_resolution = 2
+map_resolution = 2
 # map_resolution = 2.89
 # map_resolution = 3
 # map_resolution = 4

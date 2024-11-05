@@ -248,6 +248,16 @@ class AirSimDatafeedNode:
             hfov_rad = fov * math.pi / 180.0
             fx = (image_width / 2.0) / math.tan(hfov_rad / 2.0)
             fy = fx
+            max_depth = 30
+            stride = 2
+            # Compute 3D points from the depth map
+            point_cloud = []
+            for v in range(0, response.height, stride):
+                for u in range(0, response.width, stride):
+                    z = depth_data[v, u]
+                    if z >= 1 and z < max_depth:
+                        x = (u - cx) * z / fx
+                        y = (v - cy) * z / fy
 
             # Compute principal point coordinates
             cx = image_width / 2.0
@@ -276,6 +286,9 @@ class AirSimDatafeedNode:
 
             points = np.vstack((x, y, z_valid)).transpose()
             points_rotated = self.rotate_points_x_axis(points)
+
+                        # enu_point = Point(point[0], point[1], point[2])
+                        # point_cloud.append([enu_point.x, enu_point.y, enu_point.z])
 
             # Create the PointCloud2 message
             fields = [
@@ -311,22 +324,15 @@ class AirSimDatafeedNode:
         for pose_stamped in msg.poses:
             # Extract the position and orientation
             pos = pose_stamped.pose.position
-            # ori = pose_stamped.pose.orientation
-            
-            # Append to respective lists
-            # positions.append((pos.x, pos.y, pos.z))
-            # positions.append((pos.x, pos.y, -pos.z))
-            # positions.append((-pos.y, -pos.x, -pos.z))
-            # positions.append((-pos.y, pos.x, -pos.z))
-
-            # rot_pos = self.rotate_point(np.array((-pos.y, -pos.x, -pos.z)), axis='x', angle=-90)
             # positions.append((-pos.z, pos.x, pos.y))
-            positions.append((pos.y, pos.x, -pos.z))
 
-            # rot_pos = self.rotate_point(np.array((pos.z, pos.y, pos.x)), axis='x', angle=-90)
+            # positions.append((pos.y, pos.x, -pos.z))
+            positions.append((-pos.y, pos.x, -pos.z))
+
+            # rot_pos = self.rotate_point(np.array((pos.x, pos.y, pos.z)), axis='x', angle=-90)
             # rot_pos = self.rotate_point(np.array((pos.z, pos.y, pos.x)), axis='x', angle=-90)
             # rot_pos = self.rotate_point(np.array((pos.x, -pos.y, -pos.z)), axis='x', angle=-90)
-            # positions.append(tuple(rot_pos))
+            # positions.append((-rot_pos[0], rot_pos[1], -rot_pos[2]))
             
             
 
