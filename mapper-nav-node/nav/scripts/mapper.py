@@ -254,7 +254,7 @@ class VoxArray:
         
 
         
-        if not is_glob_fame:
+        if not is_glob_fame and len(pcd) > 0:
             qtr = R.from_quat(cam_qtr)
             # inv_qtr = qtr.inv()
             pcd = np.array(pcd)
@@ -283,12 +283,13 @@ class VoxArray:
         
     def __is_on_path(self, c):
         # print(f"is {c} in this path:{self.plan_path}")
-        for p in self.plan_path:
+        for i, p in enumerate(self.plan_path[:-1]):
             if p == c:
-                # print(f"{c} is on the path")
+                print(f"{c} is on the path")
+                self.plan_path = self.plan_path[i:]
                 return True
 
-        # print(f"{c} is NOT on the path")
+        print(f"{c} is NOT on the path")
         # print(f"path={self.plan_path}")
         return False
 
@@ -326,20 +327,23 @@ class VoxArray:
         
 
     def plan_a_star(self, ch_pts):
-        if not self.updated_start_or_goal:
-            if self.__is_on_path(self.pos):
-                if not self.__do_obst_interfere(self.plan_path, ch_pts):
-                    return 
+        # if not self.updated_start_or_goal:
+            # if self.__is_on_path(self.pos):
+                # if not self.__do_obst_interfere(self.plan_path, ch_pts):
+                    # return 
 
-        print(f"start={self.start} pos={self.pos} goal={self.goal}")
+        if not self.updated_start_or_goal:
+            if not self.__do_obst_interfere(self.plan_path, ch_pts):
+                return 
+        # print(f"start={self.start} pos={self.pos} goal={self.goal}")
         # print(f"new plan {self.start} => {self.goal}")
 
         # print(f"start={tuple(self.point_from_map(self.start)[0])} pos={tuple(self.point_from_map(self.pos)[0])}")
         # print(f"new plan {tuple(self.point_from_map(self.start)[0])} => {tuple(self.point_from_map(self.goal)[0])}")
 
-        self.plan_path = a_star_3d(self.vox, self.start, self.goal)
+        self.plan_path = a_star_3d(self.vox, self.pos, self.goal)
         self.updated_start_or_goal = False
-        print(f"found path={self.plan_path}")
+        # print(f"found path={self.plan_path}")
         self.__set_plan_qtrs()
         # print(f"found plan qtrs={self.plan_qtrs}")
         
