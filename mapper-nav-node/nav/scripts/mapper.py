@@ -107,18 +107,11 @@ class VoxArray:
         self.start:tuple = tuple(self.cntr)
         self.updated_start_or_goal:bool = False
 
-        # travel_off = np.array([3, 2, 0])
-        # travel_off = np.array([7, 2, 0])
-        # travel_off = np.array([20, 5, 2])
-        # travel_off = np.array([31, -15, 2])
-        # travel_off = np.array([32, 7, 4])
         travel_off = np.array(cfg.travel_off)
         self.goal:tuple = tuple((np.array(self.start) + travel_off).astype(int))
 
         self.pos:tuple = self.start
         self.pos_acc:tuple = self.start
-        # print(f"self.pos={self.pos}")
-        # print(f"self.goal={self.goal}")
         self.qtr = [0., 0., 0., 1.]
 
         self.data = []
@@ -156,6 +149,7 @@ class VoxArray:
 
     def set_goal(self, new_goal, update_start=True):
         print(f"set new goal to {new_goal}")
+        print(f"cur start={self.start} plan.len={len(self.plan_path)}")
         self.goal = tuple(new_goal)
         self.updated_start_or_goal = True
         if update_start:
@@ -282,6 +276,8 @@ class VoxArray:
         
         
     def __is_on_path(self, c):
+        if len(self.plan_path) == 0:
+            return True
         # print(f"is {c} in this path:{self.plan_path}")
         for i, p in enumerate(self.plan_path[:-1]):
             if p == c:
@@ -327,24 +323,27 @@ class VoxArray:
         
 
     def plan_a_star(self, ch_pts):
+        if self.updated_start_or_goal or \
+            not self.__is_on_path(self.pos) or \
+            self.__do_obst_interfere(self.plan_path, ch_pts):
+
         # if not self.updated_start_or_goal:
             # if self.__is_on_path(self.pos):
-                # if not self.__do_obst_interfere(self.plan_path, ch_pts):
-                    # return 
+                # return 
 
-        if not self.updated_start_or_goal:
-            if not self.__do_obst_interfere(self.plan_path, ch_pts):
-                return 
-        # print(f"start={self.start} pos={self.pos} goal={self.goal}")
-        # print(f"new plan {self.start} => {self.goal}")
+        # if not self.updated_start_or_goal:
+            # if not self.__do_obst_interfere(self.plan_path, ch_pts):
+                # return 
+            
+            
 
-        # print(f"start={tuple(self.point_from_map(self.start)[0])} pos={tuple(self.point_from_map(self.pos)[0])}")
-        # print(f"new plan {tuple(self.point_from_map(self.start)[0])} => {tuple(self.point_from_map(self.goal)[0])}")
+            # print(f"start={self.start} pos={self.pos} goal={self.goal}")
+            print(f"new plan {self.start} => {self.goal}")
 
-        self.plan_path = a_star_3d(self.vox, self.pos, self.goal)
-        self.updated_start_or_goal = False
-        # print(f"found path={self.plan_path}")
-        self.__set_plan_qtrs()
+            self.plan_path = a_star_3d(self.vox, self.pos, self.goal)
+            self.updated_start_or_goal = False
+            # print(f"found path={self.plan_path}")
+            self.__set_plan_qtrs()
         # print(f"found plan qtrs={self.plan_qtrs}")
         
         

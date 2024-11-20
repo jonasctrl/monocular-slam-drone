@@ -128,7 +128,7 @@ class MapperNavNode:
     def step(self):
         if True:
         # try:
-            # print(f"step[{self.sequence}]")
+            print(f"step[{self.sequence}]")
             # Get camera position and orientation
             fov, position, orientation = self.get_camera_info()
 
@@ -182,16 +182,21 @@ class MapperNavNode:
 
             t1 = time.time()
 
+    
+            print(f"step[{self.sequence}] updating map")
             ch_pts = self.vmap.update(pcd, pos, qtr, is_glob_fame)
             
             t2 = time.time()
             # print(f"press any key to send events")
             # input()
-            do_update = self.vmap.updated_start_or_goal
+            # do_update = self.vmap.updated_start_or_goal
+            print(f"step[{self.sequence}] planning")
+            do_update = True
             self.vmap.plan(ch_pts)
             t3 = time.time()
 
 
+            print(f"step[{self.sequence}] getting plan")
             path, _ = self.vmap.get_plan(orig_coord=True)
             # print(f"path={path}")
 
@@ -203,8 +208,9 @@ class MapperNavNode:
 
             # if g_num % 5  == 0 and len(pth) > 1: 
             # if len(pth) > 1:
+            print(f"step[{self.sequence}] moving")
             if do_update and len(pth) > 1:
-                print(f"pth={pth}")
+                # print(f"pth={pth}")
                 self.ctl.path = pth
                 self.ctl.move_along_path_pos()
 
@@ -216,6 +222,7 @@ class MapperNavNode:
             t4 = time.time()
 
             
+            print(f"step[{self.sequence}] publishing")
             if cfg.publish_occup:
                 self.publish_occupied_space_msg()
 
@@ -235,9 +242,9 @@ class MapperNavNode:
                 self.publish_plan_path_msg(orig=False) # Map scale
                 self.publish_plan_path_msg(orig=True) # Original scale
 
-            t6 = time.time()
+            t5 = time.time()
 
-            # print(f"mapping:{round(t2-t1, 4)} fly:{round(t3-t2, 4)} pub1:{round(t4-t3, 4)} plan:{round(t5-t4, 4)} pub2:{round(t6-t5, 4)}")
+            print(f"mapping:{round(t2-t1, 4)} planning:{round(t3-t2, 4)} move:{round(t4-t3, 4)} pub:{round(t5-t4, 4)}")
             
 
         # except Exception as e:
@@ -438,11 +445,7 @@ class DroneController:
     def __init__(self, client):
         self.client = client
         self.speed = 5.0
-        self.tolerance = 0.2
-        self.idx = 0
-
         self.path = []
-        self.path_idx = 0
 
 
         # If inside container: ip="host.docker.internal", port=41451
@@ -451,21 +454,17 @@ class DroneController:
         # self.client.takeoffAsync()
         # self.client.armDisarm(True)
 
-    def calculate_yaw(self, start, end):
-        dx, dy = end[0] - start[0], end[1] - start[1]
-        yaw = np.degrees(np.arctan2(dy, dx))
-        return yaw
+    # def calculate_yaw(self, start, end):
+        # dx, dy = end[0] - start[0], end[1] - start[1]
+        # yaw = np.degrees(np.arctan2(dy, dx))
+        # return yaw
 
     def move_along_path_pos(self):
         
-        t0 = time.time()
-        # pth = [(x, y, -z) for (x, y, z) in self.path]
-        # pth = [(y, x, -z) for (x, y, z) in self.path]
-        pth = [(-x, -y, -z) for (x, y, z) in self.path]
+        # t0 = time.time()
 
-        # path = [airsim.Vector3r(x, -y, z) for (x, y, z) in pth]
         path = [airsim.Vector3r(-x, y, -z) for (x, y, z) in self.path]
-        print(f"air_path={path}")
+        # print(f"air_path={path}")
         
         # desired_yaw = self.calculate_yaw(self.path[0], self.path[-1])
         
@@ -475,13 +474,12 @@ class DroneController:
             timeout_sec=60,
             drivetrain=airsim.DrivetrainType.ForwardOnly,
             # drivetrain=airsim.DrivetrainType.MaxDegreeOfFreedom,
-            yaw_mode=airsim.YawMode(is_rate=False, yaw_or_rate=0)
+            yaw_mode=airsim.YawMode(is_rate=False, yaw_or_rate=0),
             # yaw_mode=airsim.YawMode(is_rate=False, yaw_or_rate=desired_yaw)
-            # lookahead=5,
-            # adaptive_lookahead=True
+            lookahead=-1,
+            adaptive_lookahead=0
         )
-        # .join()
-        t1 = time.time()
+        # t1 = time.time()
         # print(f"airsim={t1-t0}")
 
 
