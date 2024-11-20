@@ -23,13 +23,22 @@ ray_hit_incr = 7
 
 
 # map_resolution = 0.5
-map_resolution = 1
+# map_resolution = 1
 # map_resolution = 1.5
-# map_resolution = 2
+map_resolution = 2
 # map_resolution = 2.89
 # map_resolution = 3
 # map_resolution = 4
 # map_resolution = 8
+
+
+######################
+#  data proccessing  #
+######################
+
+dimg_stride = 2
+dimg_min_depth = 1
+dimg_max_depth = 50
 
 ###############
 #  maze part  #
@@ -44,7 +53,7 @@ cam_scaling = 8
 
 
 ##################
-#  path_finding  #
+#  path finding  #
 ##################
 
 # travel_off = (20, 5, 2) 
@@ -54,6 +63,8 @@ travel_off = (0, 0, 0)
 
 use_drrt = False
 use_a_star = True
+
+path_tolerance = 3.0
 
 
 ################
