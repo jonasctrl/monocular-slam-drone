@@ -71,6 +71,9 @@ path_tolerance = 3.0
 #  publishing  #
 ################
 
+publish_occup_intensities = True
+# publish_occup_intensities = False
+
 # publish_occup = False
 publish_occup = True
 publish_empty = False

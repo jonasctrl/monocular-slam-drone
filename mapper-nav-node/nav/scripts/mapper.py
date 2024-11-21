@@ -167,7 +167,9 @@ class VoxArray:
     def get_occupied_space_pcd(self):
         x, y, z = np.nonzero(self.vox >= cfg.occup_thr)
         pcd = np.array([x, y, z]).transpose()
-        return pcd
+        # values = self.vox[pcd]
+        values = self.vox[pcd[:, 0], pcd[:, 1], pcd[:, 2]]
+        return pcd, values
 
     def point_from_map(self, pt):
         pt_offsetted = pt
@@ -317,7 +319,7 @@ class VoxArray:
                 min_diff = diff
                 min_idx = i
 
-        print(f"min diff={min_diff} idx={min_idx}")
+        # print(f"min diff={min_diff} idx={min_idx}")
         if min_idx > 0:
             self.plan_path = self.plan_path[min_idx + 1:]
             self.plan_qtrs = self.plan_qtrs[min_idx + 1:]
