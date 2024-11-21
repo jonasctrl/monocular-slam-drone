@@ -23,9 +23,9 @@ ray_hit_incr = 7
 
 
 # map_resolution = 0.5
-# map_resolution = 1
+map_resolution = 1
 # map_resolution = 1.5
-map_resolution = 2
+# map_resolution = 2
 # map_resolution = 2.89
 # map_resolution = 3
 # map_resolution = 4
