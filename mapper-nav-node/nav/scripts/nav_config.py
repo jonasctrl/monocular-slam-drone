@@ -4,7 +4,7 @@
 #############
 map_depth = 600
 map_width = 600
-map_heigth = 200
+map_heigth = 100
 
 # map_depth = 300
 # map_width = 300
@@ -70,6 +70,9 @@ path_tolerance = 3.0
 ################
 #  publishing  #
 ################
+
+publish_occup_intensities = True
+# publish_occup_intensities = False
 
 # publish_occup = False
 publish_occup = True

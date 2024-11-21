@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
-from sensor_msgs.msg import PointCloud2
+from sensor_msgs.msg import PointCloud2, PointField
 from sensor_msgs import point_cloud2 as pc2
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, PointStamped, Point
@@ -9,6 +9,7 @@ from std_msgs.msg import Header
 # from nav.msg import Pcd2WithPose, DepthWithPose
 from cv_bridge import CvBridge
 import math
+import struct
 
 import airsim
 # import math
@@ -33,7 +34,7 @@ g_num = 0
 class MapperNavNode:
     def __init__(self):
         self.sequence = 0
-        self.vmap = VoxArray(resolution=cfg.map_resolution, shape=[600,600,300])
+        self.vmap = VoxArray(resolution=cfg.map_resolution, shape=(cfg.map_width,cfg.map_depth,cfg.map_heigth))
         rospy.init_node('mapper_nav', anonymous=True)
         
         self.client = airsim.MultirotorClient(ip="host.docker.internal", port=41451)
@@ -65,10 +66,10 @@ class MapperNavNode:
 
         p = camera_info.pose.position
         # NED to ENU
-        pt = np.array([-p.x_val, p.y_val, -p.z_val])
+        pt = np.array([p.x_val, -p.y_val, -p.z_val])
         o = camera_info.pose.orientation
         # NED to ENU
-        ori = np.array([-o.x_val, o.y_val, -o.z_val, o.w_val])
+        ori = np.array([o.x_val, -o.y_val, -o.z_val, o.w_val])
 
         return fov, pt, ori
 
@@ -105,7 +106,7 @@ class MapperNavNode:
                         x = (u - cx) * z / fx
                         y = (v - cy) * z / fy
                         # rotation 90 deg OX
-                        pcd.append([-z, x, -y])
+                        pcd.append([z, -x, -y])
             
             pos = position
             qtr = orientation
@@ -210,12 +211,6 @@ class MapperNavNode:
             (tx, ty, tz) = pt
             (qx, qy, qz, qw) = qtr
 
-            # Need to rotate 90 deg in Z axis
-            # orig_qtr = R.from_quat(qtr)
-            # z_rot = R.from_euler('z', np.deg2rad(90))
-            # rot_qtr = z_rot * orig_qtr
-            # (qx, qy, qz, qw) = rot_qtr.as_quat()
-            
             pose_stamped = PoseStamped()
             pose_stamped.header.frame_id = "map"
             pose_stamped.header.stamp = rospy.Time.now()
@@ -278,11 +273,39 @@ class MapperNavNode:
         self.goal_pub.publish(point_msg)
 
     def publish_occupied_space_msg(self):
-        points = self.vmap.get_occupied_space_pcd()
+        points, intensities = self.vmap.get_occupied_space_pcd()
         header = Header()
         header.stamp = rospy.Time.now()
         header.frame_id = "map"
-        pcd_msg = pc2.create_cloud_xyz32(header, points)
+
+        if cfg.publish_occup_intensities:
+            fields = [
+                PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
+                PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
+                PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
+                PointField(name='intensity', offset=12, datatype=PointField.FLOAT32, count=1),
+            ]
+
+            # Pack data into binary format
+            data = []
+            for point, intensity in zip(points, intensities):
+                data.append(struct.pack('ffff', point[0], point[1], point[2], intensity))
+
+            data = b''.join(data)
+
+            pcd_msg = PointCloud2(
+                header=header,
+                height=1,
+                width=len(points),
+                fields=fields,
+                is_bigendian=False,
+                point_step=16,  # 4 fields * 4 bytes/field
+                row_step=16 * len(points),
+                data=data,
+                is_dense=True
+            )
+        else:
+            pcd_msg = pc2.create_cloud_xyz32(header, points)
 
         self.occupied_pub.publish(pcd_msg)
 
@@ -298,7 +321,7 @@ class MapperNavNode:
     def goal_callback(self, msg):
         position = msg.pose.position
         # pos = tuple(np.array([position.x, position.y, position.z]).astype(int))
-        pos = tuple(np.array([position.x, position.y, 77]).astype(int))
+        pos = tuple(np.array([position.x, position.y, self.vmap.cntr[2]]).astype(int))
         self.vmap.set_goal(pos, update_start=True)
 
 
@@ -330,7 +353,7 @@ class DroneController:
         # self.client.armDisarm(True)
 
     def move_along_path_pos(self):
-        path = [airsim.Vector3r(-x, y, -z) for (x, y, z) in self.path]
+        path = [airsim.Vector3r(x, -y, -z) for (x, y, z) in self.path]
         # print(f"air_path={path}")
         self.client.moveOnPathAsync(
             path=path,
