@@ -2,6 +2,7 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import time
+import random
 
 from a_star import a_star_3d
 from utils import bresenham3d_raycast, clamp, quaternion_from_two_vectors
@@ -14,6 +15,21 @@ from numba import njit
 
 grid_shape = np.array([cfg.map_depth, cfg.map_width, cfg.map_heigth]).astype(int)
 
+@njit
+def get_empty_space_pcd(vox):
+    x, y, z = np.nonzero((cfg.occup_min <= vox) & (vox < cfg.occup_thr))
+    pcd = np.vstack((x, y, z)).transpose()
+    return pcd
+
+@njit
+def get_occupied_space_pcd(vox):
+    x, y, z = np.nonzero(vox >= cfg.occup_thr)
+    pcd = np.vstack((x, y, z)).transpose()
+    vals = []
+    for (x, y, z) in pcd:
+        vals.append(vox[x, y, z])
+    values = np.array(vals, dtype=np.int8)
+    return pcd, values
 
 @njit
 def unique_pcd_njit(pcd):
@@ -69,6 +85,29 @@ def add_pcd_njit(vox, pcd, cam_pt, resolution, off):
 
     return changed_pts
 
+def precompile():
+    print(f"precompile ... ", end="")
+    vox = np.empty((4,5,3), dtype=np.int8)
+    vox.fill(-128)
+    vals = np.random.randint(6, 12, size=10, dtype=np.int8)
+    for v in vals:
+        x = random.randint(0, vox.shape[0]-1)
+        y = random.randint(0, vox.shape[1]-1)
+        z = random.randint(0, vox.shape[2]-1)
+        vox[x, y, z] = v
+
+    get_occupied_space_pcd(vox)
+    get_empty_space_pcd(vox)
+
+    pcd = [(1,2,3), (0,2,2), (1,2,1), (0,0,2)]
+    add_pcd_njit(vox,
+        np.array(pcd),
+        np.array((1,2,0), dtype=np.int64),
+        2.0,
+        np.array((2,1,0)))
+
+
+    print(f"done")
 
 class VoxArray:
     def __init__(self, resolution:float, shape:tuple):
@@ -160,16 +199,10 @@ class VoxArray:
         return pcd
         
     def get_empty_space_pcd(self):
-        x, y, z = np.nonzero((cfg.occup_min <= self.vox) & (self.vox < cfg.occup_thr))
-        pcd = np.array([x, y, z]).transpose()
-        return pcd
+        return get_empty_space_pcd(self.vox)
         
     def get_occupied_space_pcd(self):
-        x, y, z = np.nonzero(self.vox >= cfg.occup_thr)
-        pcd = np.array([x, y, z]).transpose()
-        # values = self.vox[pcd]
-        values = self.vox[pcd[:, 0], pcd[:, 1], pcd[:, 2]]
-        return pcd, values
+        return get_occupied_space_pcd(self.vox)
 
     def point_from_map(self, pt):
         pt_offsetted = pt

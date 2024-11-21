@@ -17,7 +17,7 @@ import numpy as np
 # from scipy.spatial.transform import Rotation as R
 import time
 
-from mapper import VoxArray 
+from mapper import VoxArray, precompile
 
 import nav_config as cfg
 
@@ -358,7 +358,7 @@ class DroneController:
         self.client.moveOnPathAsync(
             path=path,
             velocity=self.speed,
-            timeout_sec=60,
+            timeout_sec=10,
             drivetrain=airsim.DrivetrainType.ForwardOnly,
             yaw_mode=airsim.YawMode(is_rate=False, yaw_or_rate=0),
             lookahead=-1,
@@ -368,6 +368,8 @@ class DroneController:
 
 if __name__ == '__main__':
     try:
+        precompile()
+
         node = MapperNavNode()
         node.run()
     except rospy.ROSInterruptException:
