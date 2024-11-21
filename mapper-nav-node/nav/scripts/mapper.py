@@ -4,7 +4,7 @@ from scipy.spatial.transform import Rotation as R
 import time
 
 from a_star import a_star_3d
-from utils import bresenham3d_raycast, depth_img_to_pcd, clamp, quaternion_from_two_vectors
+from utils import bresenham3d_raycast, clamp, quaternion_from_two_vectors
 import nav_config as cfg
 # from math import tan, pi
 # from d_star import DStar
@@ -13,13 +13,7 @@ from drrt import DRRT
 from numba import njit
 
 grid_shape = np.array([cfg.map_depth, cfg.map_width, cfg.map_heigth]).astype(int)
-# grid_shape = np.array([600, 600, 200]).astype(int)
-# grid_st = np.array([0, 0, 0]).astype(int)
-# center = np.array([grid_shape[0]//2, grid_shape[1]//2, 50]).astype(int)
 
-# import inspect
-# def hit():
-    # print(f"{inspect.currentframe().f_code.co_name}:{inspect.currentframe().f_lineno}")
 
 @njit
 def unique_pcd_njit(pcd):
@@ -52,14 +46,11 @@ def add_pcd_njit(vox, pcd, cam_pt, resolution, off):
     coord_clp = np.clip(coord, bgn, end)
     unique_pcd = unique_pcd_njit(coord_clp)
 
-    # not_ch = 0
     
     for point in unique_pcd:
         (x, y, z) = point
         if vox[x, y, z] < cfg.occup_thr:
             changed_pts.append((x, y, z, -1))
-        # vox[x, y, z] = cfg.occup_thr
-        # vox[x, y, z] = cfg.ray_hit_incr
         vox[x, y, z] = clamp(vox[x, y, z] + cfg.ray_hit_incr, cfg.occup_min, cfg.occup_max)
         cols = bresenham3d_raycast(cam_pt, point, vox)
         for cur in cols:
@@ -70,16 +61,12 @@ def add_pcd_njit(vox, pcd, cam_pt, resolution, off):
             elif v > cfg.occup_min:
                 incr = cfg.ray_miss_incr
                 ch_val = clamp(v + incr, cfg.occup_min, cfg.occup_max)
-                # print(f"> {x} {y} {z} : {v} => {ch_val}")
                 vox[x, y, z] = ch_val
                 if v < cfg.occup_thr and ch_val >= cfg.occup_thr:
                     changed_pts.append((x, y, z, -1))
                 elif v >= cfg.occup_thr and ch_val < cfg.occup_thr:
                     changed_pts.append((x, y, z, 0))
-                # else:
-                    # not_ch += 1
 
-    # print(f"c={len(changed_pts)} nc={not_ch}")
     return changed_pts
 
 
@@ -105,19 +92,14 @@ class VoxArray:
         self.init_off = np.array([0,0,0])
         self.init_pos = self.cntr.copy()
         self.start:tuple = tuple(self.cntr)
+        self.updated_start_or_goal:bool = False
 
-        # travel_off = np.array([3, 2, 0])
-        # travel_off = np.array([7, 2, 0])
-        # travel_off = np.array([20, 5, 2])
-        # travel_off = np.array([31, -15, 2])
-        # travel_off = np.array([32, 7, 4])
-        travel_off = np.array(cfg.travel_off)
-        self.goal:tuple = tuple((np.array(self.start) + travel_off).astype(int))
+        # travel_off = np.array(cfg.travel_off)
+        # self.goal:tuple = tuple((np.array(self.start) + travel_off).astype(int))
+        self.goal:tuple = tuple(self.cntr)
 
         self.pos:tuple = self.start
         self.pos_acc:tuple = self.start
-        # print(f"self.pos={self.pos}")
-        # print(f"self.goal={self.goal}")
         self.qtr = [0., 0., 0., 1.]
 
         self.data = []
@@ -153,6 +135,15 @@ class VoxArray:
         else:
             return self.goal
 
+    def set_goal(self, new_goal, update_start=True):
+        print(f"set new goal to {new_goal}")
+        print(f"cur start={self.start} plan.len={len(self.plan_path)}")
+        self.goal = tuple(new_goal)
+        self.updated_start_or_goal = True
+        if update_start:
+            self.start = self.pos 
+
+
     def get_plan(self, orig_coord=True):
         if len(self.plan_path) == 0:
             # print(f"No plan path")
@@ -178,10 +169,6 @@ class VoxArray:
         pcd = np.array([x, y, z]).transpose()
         return pcd
 
-    # def navigate(self, start, goal):
-        # self.nav_path = a_star_3d(self.vox, start, goal)
-        # print(f"found path={self.nav_path}")
-
     def point_from_map(self, pt):
         pt_offsetted = pt
         pt_downscaled = pt_offsetted - self.cntr + self.init_off
@@ -194,9 +181,9 @@ class VoxArray:
     def point_to_map_acc(self, pt):
         pt_downscaled = (pt / self.res)
 
-        if not self.has_init_off:
-            self.has_init_off = True
-            self.init_off = pt_downscaled.copy()
+        # if not self.has_init_off:
+            # self.has_init_off = True
+            # self.init_off = pt_downscaled.copy()
 
         pt_offsetted = pt_downscaled + self.cntr - self.init_off 
         pt_clipped = np.clip(pt_offsetted, self.bgn, self.shp-1)
@@ -205,15 +192,6 @@ class VoxArray:
         return pt_rounded
 
     def point_to_map(self, pt):
-        # pt_downscaled = (pt / self.res)
-
-        # if not self.has_init_off:
-            # self.has_init_off = True
-            # self.init_off = pt_downscaled.copy()
-
-        # pt_offsetted = pt_downscaled + self.cntr - self.init_off 
-        # pt_clipped = np.clip(pt_offsetted, self.bgn, self.shp-1)
-        
         pt_clipped = self.point_to_map_acc(pt)
         pt_rounded = np.round(pt_clipped).astype(int)
         
@@ -221,103 +199,32 @@ class VoxArray:
 
     def update(self, pcd, cam_pos, cam_qtr, is_glob_fame):
         # Convert camera point to point in local voxel map
-        # c = (np.array([cam_pos])/ self.res).astype(int) + self.cntr - self.init_off 
-        # c = np.clip(c, self.bgn, self.shp-1).astype(int)
+        if not self.has_init_off:
+            self.has_init_off = True
+            self.init_off = np.array([cam_pos]) / self.res
         
         
-        (tx, ty, tz) = cam_pos
-        cam_pos = (-ty, tx, tz)
-        # cam_pos = (ty, tx, tz)
         c = tuple(self.point_to_map(np.array([cam_pos]))[0])
         c_acc = tuple(self.point_to_map_acc(np.array([cam_pos]))[0])
-
-        # (tx, ty, tz) = cam_pos
-        # cam_pos = (tx, ty, -tz)
-        # cam_pos = (ty, tx, -tz)
-        # cam_pos = (-ty, -tx, -tz)
-        
-        
-        # (qx, qy, qz, qw) = cam_qtr
-        # cam_qtr = (qy, qx, -qz, qw)
-
-        # (qx, qy, qz, qw) = cam_qtr
-        # cam_qtr = (-qx, -qy, -qz, qw)
-        # cam_qtr = (-qx, -qy, -qz, qw)
-        # cam_qtr = (-qx, -qy, -qz, qw)
-
-
-        # pcd2= pcd.copy()
-
-        # px = pcd2[:,0]
-        # py = pcd2[:,1]
-        # pz = pcd2[:,2]
-
-        # pcd[:,0] = py
-        # pcd[:,1] = px
-        # pcd[:,2] = -pz
-
-
-
-
-        # pcd = [(-y, -x, z) for (x, y, z) in pcd]
-        pcd = [(y, x, -z) for (x, y, z) in pcd]
-        
-        
-        
-
-        # c = tuple(c)
-        # pt_up = self.point_from_map(c) 
-
-        
-        # c_acc = np.array([cam_pos])/ self.res + self.cntr - self.init_off
-        # c_acc = np.clip(c_acc, self.bgn, self.shp-1)
-        # c_acc = c_acc[0]
-
-        # On first "update" call move camera to center of map
-        # if not self.has_init_off:
-            # self.has_init_off = True
-            # self.init_off = c_acc - self.cntr
-            # c = c - self.init_off
-            # c_acc = c_acc - self.init_off
-
-
-        # Point along the path
-        # if len(self.cam_path_acc) > 0:
-            # p1 = np.array(self.cam_path_acc[-1])
-            # p2 = np.array(cam_pos)
-            # p_diff = p2 - p1
-            # qtr = quaternion_from_two_vectors(np.array([1, 0, 0]), p_diff)
-        # else:
-            # qtr = [0, 0, 0, 1]
 
         # Add position and quaterion to camera positions and orientations
         self.cam_qtrs.append(cam_qtr)
         self.cam_path.append(c)
         self.cam_path_acc.append(c)
 
-        # print(f"settin pos to {tuple(self.point_from_map(c)[0])}")
         self.pos = c
         self.pos_acc = c_acc
         self.qtr = cam_qtr
-        # print(f"setting pos={self.pos} qtr={self.qtr}")
         
-
         
-        if not is_glob_fame:
+        if not is_glob_fame and len(pcd) > 0:
             qtr = R.from_quat(cam_qtr)
-            # inv_qtr = qtr.inv()
             pcd = np.array(pcd)
             pcd = qtr.apply(pcd)
-            # pcd = inv_qtr.apply(pcd)
             pcd = pcd + np.array(cam_pos)
         
         ch_pts = self.add_pcd(pcd, c)
 
-        # print(f"{[v for (x, y, z, v) in ch_pts]}")
-        # print(f"{[v for (x, y, z, v) in ch_pts if v < 0]}")
-        
-        # self.plan_drrt(cam_pos, ch_pts)
-        
         return ch_pts
 
         
@@ -330,31 +237,43 @@ class VoxArray:
             self.plan_drrt(ch_pts)
         
         
-    def __is_on_path(self, c):
-        # print(f"is {c} in this path:{self.plan_path}")
-        for p in self.plan_path:
-            if p == c:
+        
+    def __is_on_path_soft(self, tolerance:float) -> bool:
+        # return True
+        if len(self.plan_path) == 0:
+            return True
+        c = self.pos
+        for i, p in enumerate(self.plan_path[:-1]):
+            diff = ((c[0] - p[0])**2 + (c[1] - p[1])**2 + (c[2] - p[2])**2) ** 0.5
+            if diff <= tolerance:
                 print(f"{c} is on the path")
+                # self.plan_path = self.plan_path[i:]
                 return True
 
         print(f"{c} is NOT on the path")
-        # print(f"path={self.plan_path}")
+        return False
+
+        
+    def __is_on_path(self, c):
+        if len(self.plan_path) == 0:
+            return True
+        for i, p in enumerate(self.plan_path[:-1]):
+            if p == c:
+                print(f"{c} is on the path")
+                # self.plan_path = self.plan_path[i:]
+                return True
+
+        print(f"{c} is NOT on the path")
         return False
 
 
     def __do_obst_interfere(self, path, obst):
         new_obst = [(x, y, z) for x, y, z, v in obst if v == -1]
-        # del_obst = [(x, y, z) for x, y, z, v in obst if v == 0]
 
         common = set(path).intersection(new_obst)
-        # common = set(path).intersection(obst)
-
         interf = len(common) > 0
-
-        print(f"interference={interf}")
         
         return interf
-
         
         
     def __set_plan_qtrs(self):
@@ -372,44 +291,72 @@ class VoxArray:
         self.plan_qtrs = nav_qtrs
         
         
+    def do_need_new_plan(self, ch_pts):
+        if self.updated_start_or_goal:
+            return True
+
+        if not self.__is_on_path_soft(tolerance=cfg.path_tolerance):
+            return True
+
+        # if not self.__is_on_path(self.pos):
+            # return True
+
+        if self.__do_obst_interfere(self.plan_path, ch_pts):
+            return True
+
+        return False
+
+
+    def walk_path(self):
+        min_diff = float("inf")
+        min_idx = 0
+        c = self.pos
+        for i, p in enumerate(self.plan_path):
+            diff = ((c[0] - p[0])**2 + (c[1] - p[1])**2 + (c[2] - p[2])**2) ** 0.5
+            if diff <= min_diff:
+                min_diff = diff
+                min_idx = i
+
+        print(f"min diff={min_diff} idx={min_idx}")
+        if min_idx > 0:
+            self.plan_path = self.plan_path[min_idx + 1:]
+            self.plan_qtrs = self.plan_qtrs[min_idx + 1:]
         
 
     def plan_a_star(self, ch_pts):
-        if self.__is_on_path(self.pos):
-            if not self.__do_obst_interfere(self.plan_path, ch_pts):
-                return 
+        if not self.do_need_new_plan(ch_pts):
+            self.walk_path()
+            # if len(self.plan_path) > 0:
+                # self.plan_path = self.plan_path[1:]
+            # if len(self.plan_qtrs) > 0:
+                # self.plan_qtrs = self.plan_qtrs[1:]
+        else:
+            print(f"new plan {self.start} => {self.goal}")
 
-        # print(f"start={self.start} pos={self.pos}")
-        # print(f"new plan {self.start} => {self.goal}")
+            self.plan_path = a_star_3d(self.vox, self.pos, self.goal)
+            self.updated_start_or_goal = False
+            print(f"found path={self.plan_path}")
+            self.__set_plan_qtrs()
 
-        # print(f"start={tuple(self.point_from_map(self.start)[0])} pos={tuple(self.point_from_map(self.pos)[0])}")
-        # print(f"new plan {tuple(self.point_from_map(self.start)[0])} => {tuple(self.point_from_map(self.goal)[0])}")
-
-        self.plan_path = a_star_3d(self.vox, self.start, self.goal)
-        # print(f"found path={self.plan_path}")
-        self.__set_plan_qtrs()
+            if len(self.plan_path) > 0:
+                self.plan_path = self.plan_path[1:]
+            if len(self.plan_qtrs) > 0:
+                self.plan_qtrs = self.plan_qtrs[1:]
         # print(f"found plan qtrs={self.plan_qtrs}")
         
         
 
     def plan_drrt(self, ch_pts):
         print(f"pos={self.pos}")
-        # self.pf.update_start((self.pos[0], self.pos[1]))
-        # self.pf.update_obstacles(obst_list)
         self.pf.update_obstacles(ch_pts)
         self.pf.update_start(self.pos)
-        # print("replaning")
         self.pf.plan()
         self.pf.plan(force_iters=50)
-        # self.pf.plan(force_iters=50)
-        # print("getting path")
         st_path = self.pf.get_path()
         self.plan_path = st_path
         self.__set_plan_qtrs()
         # print(f"path={self.plan_path}")
         print(f"path.len={len(self.plan_path)}")
-
-
 
 
         
@@ -420,34 +367,6 @@ class VoxArray:
                 self.res,
                 self.cntr - self.init_off)
 
-
-    # def add_pcd_from_datapoint(self, dpt: DataPoint):
-
-        # if (len(dpt.pcd) == 0):
-            # return 
-        # pcd = dpt.pcd
-        # # rotate by given quaternion
-        # pcd = dpt.q_mod.apply(pcd)
-        # pcd = dpt.qtr.apply(pcd)
-
-        # # translate
-        # pcd = pcd + dpt.pos
-
-        # c = (np.array([dpt.pos])/ self.res).astype(int) + self.cntr
-        # c_acc = np.array([dpt.pos])/ self.res + self.cntr
-        # c = np.clip(c, self.bgn, self.shp-1).astype(int)
-        # self.cam_path.append(c[0])
-
-        # self.cam_path_acc.append(c_acc[0])
-        # self.cam_qtrs.append(dpt.qtr_cof)
-        
-        # self.add_pcd(pcd, c[0])
-
-    # def add_pcd_from_depth_image(self, qtr, pos, img, stride, factor, cam_params=None, fov=None):
-        # point_cloud = depth_img_to_pcd(img, stride, factor, cam_params=cam_params, fov=fov, max_depth=30)
-        # dpt = DataPoint(point_cloud, pos, qtr)
-        # self.add_pcd_from_datapoint(dpt)
-    
 
 
 

@@ -6,39 +6,39 @@ from sensor_msgs import point_cloud2 as pc2
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, PointStamped, Point
 from std_msgs.msg import Header
-from nav.msg import Pcd2WithPose, DepthWithPose
-import cv2
+# from nav.msg import Pcd2WithPose, DepthWithPose
 from cv_bridge import CvBridge
+import math
+
+import airsim
 # import math
 import numpy as np
-from scipy.spatial.transform import Rotation as R
+# from scipy.spatial.transform import Rotation as R
 import time
 
 from mapper import VoxArray 
-import sys, os
 
 import nav_config as cfg
 
 
+HEIGHT, WIDTH = 144, 256
+# CAMERA = "fc"
+CAMERA = "front-center"
+RATE = 5
+PTS_MULT = 2
+
 g_num = 0
 
-def print_exception(ex):
-    exc_type, _ , exc_tb = sys.exc_info()
-    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-    # print(exc_type, fname, exc_tb.tb_lineno)
-    rospy.logerr(f"ERROR: {exc_type} {fname} {exc_tb.tb_lineno}")
-
-def pointcloud2_to_array(msg):
-    # Extract the fields from PointCloud2 message
-    points = []
-    for point in pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True):
-        points.append([point[0], point[1], point[2]])
-    return np.array(points)
 
 class MapperNavNode:
     def __init__(self):
+        self.sequence = 0
         self.vmap = VoxArray(resolution=cfg.map_resolution, shape=[600,600,300])
         rospy.init_node('mapper_nav', anonymous=True)
+        
+        self.client = airsim.MultirotorClient(ip="host.docker.internal", port=41451)
+        self.client.confirmConnection()
+        self.ctl = DroneController(self.client)
 
         self.bridge = CvBridge()
         self.occupied_pub = rospy.Publisher('/occupied_space', PointCloud2, queue_size=1)
@@ -52,9 +52,121 @@ class MapperNavNode:
         self.goal_pub = rospy.Publisher('/nav_goal', PointStamped, queue_size=1)
 
         # self.depth_sub = rospy.Subscriber('/ground_truth/depth_with_pose', DepthWithPose, self.image_callback)
+        # self.depth_sub = rospy.Subscriber('/cam_pcd_pose', Pcd2WithPose, self.pcd_pose_callback, queue_size=1)
+        self.goal_sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.goal_callback, queue_size=1)
         self.depth_sub = rospy.Subscriber('/cam_pcd_pose', Pcd2WithPose, self.pcd_pose_callback, queue_size=1)
 
         rospy.loginfo("Mapper-Navigation node initialized.")
+
+
+    def get_camera_info(self):
+        camera_info = self.client.simGetCameraInfo(CAMERA)
+        fov = camera_info.fov
+
+        p = camera_info.pose.position
+        # NED to ENU
+        pt = np.array([-p.x_val, p.y_val, -p.z_val])
+        o = camera_info.pose.orientation
+        # NED to ENU
+        ori = np.array([-o.x_val, o.y_val, -o.z_val, o.w_val])
+
+        return fov, pt, ori
+
+
+    def step(self):
+        if True:
+        # try:
+            # print(f"step[{self.sequence}]")
+            # Get camera position and orientation
+            fov, position, orientation = self.get_camera_info()
+
+            response = self.client.simGetImages(
+                [airsim.ImageRequest(CAMERA, airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=False)])[0]
+            depth_data = np.array(response.image_data_float, dtype=np.float32).reshape(response.height, response.width)
+            
+            image_width = response.width
+            image_height = response.height
+
+            # Compute fx and fy from FOV
+            hfov_rad = fov * math.pi / 180.0
+            fx = (image_width / 2.0) / math.tan(hfov_rad / 2.0)
+            fy = fx
+            # Compute principal point coordinates
+            cx = image_width / 2.0
+            cy = image_height / 2.0
+
+            # Compute 3D points from the depth map
+            pcd = []
+            for v in range(0, response.height, cfg.dimg_stride):
+                for u in range(0, response.width, cfg.dimg_stride):
+                    # print(f"{[v, u, depth_data[v, u]]}")
+                    z = depth_data[v, u]
+                    if z >= cfg.dimg_min_depth and z < cfg.dimg_max_depth:
+                        x = (u - cx) * z / fx
+                        y = (v - cy) * z / fy
+                        # rotation 90 deg OX
+                        pcd.append([-z, x, -y])
+            
+            pos = position
+            qtr = orientation
+            is_glob_fame = False
+
+            t1 = time.time()
+
+    
+            # print(f"step[{self.sequence}] updating map")
+            ch_pts = self.vmap.update(pcd, pos, qtr, is_glob_fame)
+            
+            t2 = time.time()
+            # print(f"step[{self.sequence}] planning")
+            self.vmap.plan(ch_pts)
+            t3 = time.time()
+
+
+            # print(f"step[{self.sequence}] getting plan")
+            path, _ = self.vmap.get_plan(orig_coord=True)
+            # print(f"path={path}")
+
+            # print(f"step[{self.sequence}] moving")
+            if len(path) > 1:
+                self.ctl.path = path
+                self.ctl.move_along_path_pos()
+
+                # self.vmap.plan_path = []
+                # self.vmap.plan_qtrs = []
+
+
+
+            t4 = time.time()
+
+            
+            # print(f"step[{self.sequence}] publishing")
+            if cfg.publish_occup:
+                self.publish_occupied_space_msg()
+
+            if cfg.publish_empty:
+                self.publish_empty_space_msg()
+            
+            if cfg.publish_pose:
+                self.publish_map_pose_msg()
+
+
+            if cfg.publish_path:
+                self.publish_cam_path_msg()
+
+            if cfg.publish_plan:
+                self.publish_start_msg()
+                self.publish_goal_msg()
+                self.publish_plan_path_msg(orig=False) # Map scale
+                self.publish_plan_path_msg(orig=True) # Original scale
+
+            t5 = time.time()
+
+            print(f"mapping:{round(t2-t1, 4)} planning:{round(t3-t2, 4)} move:{round(t4-t3, 4)} pub:{round(t5-t4, 4)}")
+            
+
+        # except Exception as e:
+            # rospy.logerr(f"Error in step: {str(e)}")
 
 
     def publish_cam_path_msg(self):
@@ -69,12 +181,6 @@ class MapperNavNode:
             (tx, ty, tz) = pt
             (qx, qy, qz, qw) = qtr
 
-            # Need to rotate 90 deg in Z axis
-            # orig_qtr = R.from_quat(qtr)
-            # z_rot = R.from_euler('z', np.deg2rad(90))
-            # rot_qtr = z_rot * orig_qtr
-            # (qx, qy, qz, qw) = rot_qtr.as_quat()
-            
             pose_stamped = PoseStamped()
             pose_stamped.header.frame_id = "map"
             pose_stamped.header.stamp = rospy.Time.now()
@@ -189,108 +295,52 @@ class MapperNavNode:
 
         self.empty_pub.publish(pcd_msg)
 
-    def pcd_pose_callback(self, msg):
-        # print(f"received data. press any key to continue")
-        # input()
-        
-        t0 = time.time()
-        
-        pcd = pointcloud2_to_array(msg.pcd)
+    def goal_callback(self, msg):
+        position = msg.pose.position
+        # pos = tuple(np.array([position.x, position.y, position.z]).astype(int))
+        pos = tuple(np.array([position.x, position.y, 77]).astype(int))
+        self.vmap.set_goal(pos, update_start=True)
 
-        pos_pt = msg.position
-        pos  = [pos_pt.x, pos_pt.y, pos_pt.z]
-
-        qtr_pt = msg.orientation
-        qtr  = [qtr_pt.x, qtr_pt.y, qtr_pt.z, qtr_pt.w]
-
-        is_glob_fame = msg.is_global_frame.data
-
-        t1 = time.time()
-        # global g_num
-        # if g_num == 0:
-            # print()
-            # print()
-            # # sorted_arr = sorted(pcd)
-            # sorted_data = sorted(pcd, key=lambda x: (x[0], x[1], x[2]))
-            # sorted_data = [d.tolist() for d in sorted_data]
-            # s = [[str(e) for e in row] for row in sorted_data]
-            # lens = [max(map(len, col)) for col in zip(*s)]
-            # fmt = ' '.join('{{:{}}}'.format(x) for x in lens)
-            # table = [fmt.format(*row) for row in s]
-            # print('\n'.join(table))
-            # print()
-            # print(f"pos={pos}")
-            # print(f"qtr={qtr}")
-            # print()
-        # g_num+=1
-
-        ch_pts = self.vmap.update(pcd, pos, qtr, is_glob_fame)
-        
-        t2 = time.time()
-        # print(f"press any key to send events")
-        # input()
-
-        
-        if cfg.publish_occup:
-            self.publish_occupied_space_msg()
-
-        if cfg.publish_empty:
-            self.publish_empty_space_msg()
-        
-        t3 = time.time()
-        self.vmap.plan(ch_pts)
-        t4 = time.time()
-
-
-        if cfg.publish_pose:
-            self.publish_map_pose_msg()
-
-
-        if cfg.publish_path:
-            self.publish_cam_path_msg()
-
-        if cfg.publish_plan:
-            self.publish_start_msg()
-            self.publish_goal_msg()
-            self.publish_plan_path_msg(orig=False) # Map scale
-            # self.publish_plan_path_msg(orig=True) # Original scale
-
-        t5 = time.time()
-
-        print(f"init:{round(t1-t0, 4)} mapping:{round(t2-t1, 4)} pub1:{round(t3-t2, 4)} plan:{round(t4-t3, 4)} pub2:{round(t5-t4, 4)}")
-
-
-    # def image_callback(self, msg):
-        # rospy.loginfo("Received DepthithPose message")
-
-        # try:
-            # depth_map = self.bridge.imgmsg_to_cv2(msg.depth_image, desired_encoding='32FC1')
-            # rospy.loginfo(f"Image size: {depth_map.shape}")
-
-            # tx = msg.position.x
-            # ty = msg.position.y
-            # tz = msg.position.z
-            # qx = msg.orientation.x
-            # qy = msg.orientation.y
-            # qz = msg.orientation.z
-            # qw = msg.orientation.w
-
-            # factor = 1
-            # self.vmap.add_pcd_from_depth_image((qx, qy, qz, qw), (tx, ty, tz), depth_map, 5, factor, fov=90)
-
-            # self.publish_occupied_space_msg()
-            # self.publish_cam_path_msg()
-
-        # except Exception as e:
-            # rospy.logerr(f"Error processing image: {str(e)}")
 
     def run(self):
-        try:
-            rospy.spin()
-        except KeyboardInterrupt:
-            rospy.loginfo("Shutting down depth estimation node...")
-        finally:
-            cv2.destroyAllWindows()
+        rate = rospy.Rate(RATE)
+
+        while not rospy.is_shutdown():
+            self.step()
+
+            self.sequence += 1
+            rate.sleep()
+
+
+##############
+#  pathhing  #
+##############
+
+class DroneController:
+    def __init__(self, client):
+        self.client = client
+        self.speed = 5.0
+        self.path = []
+
+
+        # If inside container: ip="host.docker.internal", port=41451
+        # self._client.confirmConnection()
+        # self.client.enableApiControl(True)
+        # self.client.takeoffAsync()
+        # self.client.armDisarm(True)
+
+    def move_along_path_pos(self):
+        path = [airsim.Vector3r(-x, y, -z) for (x, y, z) in self.path]
+        # print(f"air_path={path}")
+        self.client.moveOnPathAsync(
+            path=path,
+            velocity=self.speed,
+            timeout_sec=60,
+            drivetrain=airsim.DrivetrainType.ForwardOnly,
+            yaw_mode=airsim.YawMode(is_rate=False, yaw_or_rate=0),
+            lookahead=-1,
+            adaptive_lookahead=0
+        )
 
 
 if __name__ == '__main__':

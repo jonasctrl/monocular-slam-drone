@@ -31,6 +31,15 @@ map_resolution = 2
 # map_resolution = 4
 # map_resolution = 8
 
+
+######################
+#  data proccessing  #
+######################
+
+dimg_stride = 2
+dimg_min_depth = 1
+dimg_max_depth = 50
+
 ###############
 #  maze part  #
 ###############
@@ -44,20 +53,26 @@ cam_scaling = 8
 
 
 ##################
-#  path_finding  #
+#  path finding  #
 ##################
 
-travel_off = (20, 5, 2) 
+# travel_off = (20, 5, 2) 
+# travel_off = (0, 0, 10) 
+# travel_off = (0, 5, 0) 
+travel_off = (0, 0, 0) 
 
 use_drrt = False
 use_a_star = True
+
+path_tolerance = 3.0
 
 
 ################
 #  publishing  #
 ################
 
-publish_occup = False
+# publish_occup = False
+publish_occup = True
 publish_empty = False
 
 publish_pose = True
