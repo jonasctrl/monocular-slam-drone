@@ -64,7 +64,7 @@ class MapperNavNode:
 
         p = camera_info.pose.position
         # NED to ENU
-        pt = np.array([p.y_val, p.x_val, -p.z_val])
+        pt = np.array([-p.x_val, p.y_val, -p.z_val])
         o = camera_info.pose.orientation
         # NED to ENU
         ori = np.array([o.y_val, o.x_val, -o.z_val, o.w_val])
@@ -104,8 +104,7 @@ class MapperNavNode:
                         x = (u - cx) * z / fx
                         y = (v - cy) * z / fy
                         # rotation 90 deg OX
-                        pcd.append([x, -z, y])
-
+                        pcd.append([-z, x, -y])
             
             pos = position
             qtr = orientation

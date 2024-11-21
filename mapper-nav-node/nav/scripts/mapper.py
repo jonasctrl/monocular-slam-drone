@@ -204,14 +204,8 @@ class VoxArray:
             self.init_off = np.array([cam_pos]) / self.res
         
         
-        (tx, ty, tz) = cam_pos
-        cam_pos = (-ty, tx, tz)
-        # cam_pos = (ty, tx, tz)
         c = tuple(self.point_to_map(np.array([cam_pos]))[0])
         c_acc = tuple(self.point_to_map_acc(np.array([cam_pos]))[0])
-
-        # NED to ENU
-        pcd = [(y, x, -z) for (x, y, z) in pcd]
 
         # Add position and quaterion to camera positions and orientations
         self.cam_qtrs.append(cam_qtr)
