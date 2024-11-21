@@ -13,8 +13,6 @@ import time
 from scipy.spatial.transform import Rotation as R
 from scipy.interpolate import CubicSpline
 
-CAMERA = "front-center"
-RATE = 5
 HEIGHT, WIDTH = 144, 256
 PTS_MULT = 2
 
@@ -195,6 +193,8 @@ class AirSimDatafeedNode:
 
     def get_camera_info(self):
         camera_info = self.client.simGetCameraInfo(CAMERA)
+
+        fov = camera_info.fov
         position = self.ned_to_enu_position(camera_info.pose.position)
         orientation = self.ned_to_enu_orientation(camera_info.pose.orientation)
 
@@ -209,91 +209,95 @@ class AirSimDatafeedNode:
 
         return position, orientation
 
-    def rotate_point(self, point, axis='x', angle=90):
-        """Apply rotation matrix based on the selected axis and angle."""
-        x, y, z = point
+    def rotate_points_x_axis(self, points, angle_degrees=90):
+        """
+        Rotate points around the X-axis by the specified angle.
 
-        rotation_angle = math.radians(angle)
+        Args:
+            points: Nx3 array of points (x, y, z)
+            angle_degrees: Rotation angle in degrees
+        Returns:
+            Rotated points as Nx3 array
+        """
+        angle_rad = np.radians(angle_degrees)
 
-        if axis == 'x':
-            # Rotate around X-axis
-            rotation_matrix = np.array([[1, 0, 0],
-                                        [0, math.cos(rotation_angle), -math.sin(rotation_angle)],
-                                        [0, math.sin(rotation_angle), math.cos(rotation_angle)]])
-        elif axis == 'y':
-            # Rotate around Y-axis
-            rotation_matrix = np.array([[math.cos(rotation_angle), 0, math.sin(rotation_angle)],
-                                        [0, 1, 0],
-                                        [-math.sin(rotation_angle), 0, math.cos(rotation_angle)]])
-        else:
-            # Rotate around Z-axis
-            rotation_matrix = np.array([[math.cos(rotation_angle), -math.sin(rotation_angle), 0],
-                                        [math.sin(rotation_angle), math.cos(rotation_angle), 0],
-                                        [0, 0, 1]])
+        rot_matrix = np.array([
+            [1, 0, 0],
+            [0, np.cos(angle_rad), -np.sin(angle_rad)],
+            [0, np.sin(angle_rad), np.cos(angle_rad)]
+        ])
 
-        rotated_point = np.dot(rotation_matrix, np.array([x, y, z]))
-        return rotated_point
+        return np.dot(points, rot_matrix.T)
 
     def publish_point_cloud_with_pose(self):
         try:
-            # Get camera position and orientation
-            position, orientation = self.get_camera_info()
+            fov, position, orientation = self.get_camera_info()
 
             response = self.client.simGetImages(
-                [airsim.ImageRequest(CAMERA, airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=False)])[0]
+                [airsim.ImageRequest(CAMERA, airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=False)]
+            )[0]
+
+            rospy.loginfo(f"Depth data width: {response.width}, height: {response.height}")
+            #rospy.loginfo(f"Camera fov: {fov}")
 
             depth_data = np.array(response.image_data_float, dtype=np.float32).reshape(response.height, response.width)
 
-            fx, fy = WIDTH, HEIGHT
-            cx, cy = response.width / 2, response.height / 2
+            image_width = response.width
+            image_height = response.height
 
-            max_depth = 30
-            stride = 2
-            # Compute 3D points from the depth map
-            point_cloud = []
-            for v in range(0, response.height, stride):
-                for u in range(0, response.width, stride):
-                    z = depth_data[v, u]
-                    if z > 0 and z < max_depth:
-                        x = (u - cx) * z / fx
-                        y = (v - cy) * z / fy
+            # Compute fx and fy from FOV
+            hfov_rad = fov * math.pi / 180.0
+            fx = (image_width / 2.0) / math.tan(hfov_rad / 2.0)
+            fy = fx
 
-                        point = [x, y, z]
+            # Compute principal point coordinates
+            cx = image_width / 2.0
+            cy = image_height / 2.0
 
-                        rotated_point = self.rotate_point(point, axis='x', angle=90)
-                        enu_point = Point(rotated_point[0], rotated_point[1], rotated_point[2])
-                        point_cloud.append([enu_point.x, enu_point.y, enu_point.z])
+            # Generate grid of pixel coordinates with strides
+            u_coords = np.arange(0, image_width, STRIDE_X)
+            v_coords = np.arange(0, image_height, STRIDE_Y)
+            u_grid, v_grid = np.meshgrid(u_coords, v_coords)
+
+            # Flatten the arrays
+            u_flat = u_grid.flatten()
+            v_flat = v_grid.flatten()
+            z_flat = depth_data[v_flat.astype(int), u_flat.astype(int)]
+
+            # Filter valid depth values
+            valid = (z_flat > 0) & (z_flat < MAX_DEPTH)
+            u_valid = u_flat[valid]
+            v_valid = v_flat[valid]
+            z_valid = z_flat[valid]
+
+            # Compute x, y coordinates
+            x = (u_valid - cx) * z_valid / fx
+            y = (v_valid - cy) * z_valid / fy
+
+
+            points = np.vstack((x, y, z_valid)).transpose()
+            points_rotated = self.rotate_points_x_axis(points)
 
             # Create the PointCloud2 message
-            pcd_msg = PointCloud2()
-            pcd_msg.header.seq = self.sequence
-            pcd_msg.header.stamp = rospy.Time.now()
-            pcd_msg.header.frame_id = "cam"
-
-            # Populate point cloud fields
-            pcd_msg.fields = [
+            fields = [
                 PointField('x', 0, PointField.FLOAT32, 1),
                 PointField('y', 4, PointField.FLOAT32, 1),
                 PointField('z', 8, PointField.FLOAT32, 1)
             ]
-            pcd_msg.is_bigendian = False
-            pcd_msg.point_step = 12  # 3 * 4 bytes for float32 x, y, z
-            pcd_msg.row_step = pcd_msg.point_step * len(point_cloud)
-            pcd_msg.height = 1
-            pcd_msg.width = len(point_cloud)
-            pcd_msg.is_dense = True
 
-            pcd_msg.data = np.asarray(point_cloud, np.float32).tobytes()
-            #self.pointcloud_pub.publish(pcd_msg)
+            header = Header()
+            header.seq = self.sequence
+            header.stamp = rospy.Time.now()
+            header.frame_id = 'cam'
+            point_cloud_msg = pc2.create_cloud(header, fields, points_rotated)
 
             # Create Pcd2WithPose message
             pcd2_with_pose_msg = Pcd2WithPose()
-            pcd2_with_pose_msg.pcd = pcd_msg
+            pcd2_with_pose_msg.pcd = point_cloud_msg
             pcd2_with_pose_msg.position = position
             pcd2_with_pose_msg.orientation = orientation
             pcd2_with_pose_msg.is_global_frame = Bool(data=False)
 
-            # Publish the message
             self.cam_pcd_pose_pub.publish(pcd2_with_pose_msg)
 
         except Exception as e:
