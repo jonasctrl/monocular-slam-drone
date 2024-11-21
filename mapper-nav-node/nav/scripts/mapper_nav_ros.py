@@ -67,7 +67,7 @@ class MapperNavNode:
         pt = np.array([-p.x_val, p.y_val, -p.z_val])
         o = camera_info.pose.orientation
         # NED to ENU
-        ori = np.array([o.y_val, o.x_val, -o.z_val, o.w_val])
+        ori = np.array([-o.x_val, o.y_val, -o.z_val, o.w_val])
 
         return fov, pt, ori
 
