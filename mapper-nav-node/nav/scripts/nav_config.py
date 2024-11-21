@@ -4,7 +4,7 @@
 #############
 map_depth = 600
 map_width = 600
-map_heigth = 200
+map_heigth = 100
 
 # map_depth = 300
 # map_width = 300

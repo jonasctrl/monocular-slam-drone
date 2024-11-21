@@ -71,7 +71,7 @@ def add_pcd_njit(vox, pcd, cam_pt, resolution, off):
 
 
 class VoxArray:
-    def __init__(self, resolution=0.08, shape=[600, 600, 200]):
+    def __init__(self, resolution:float, shape:tuple):
         self.shp = np.array(shape).astype(int)
         self.cntr = np.array([0.5*shape[0],
                               0.5*shape[1],

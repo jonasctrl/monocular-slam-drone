@@ -33,7 +33,7 @@ g_num = 0
 class MapperNavNode:
     def __init__(self):
         self.sequence = 0
-        self.vmap = VoxArray(resolution=cfg.map_resolution, shape=[600,600,300])
+        self.vmap = VoxArray(resolution=cfg.map_resolution, shape=(cfg.map_width,cfg.map_depth,cfg.map_heigth))
         rospy.init_node('mapper_nav', anonymous=True)
         
         self.client = airsim.MultirotorClient(ip="host.docker.internal", port=41451)
@@ -65,10 +65,10 @@ class MapperNavNode:
 
         p = camera_info.pose.position
         # NED to ENU
-        pt = np.array([-p.x_val, p.y_val, -p.z_val])
+        pt = np.array([p.x_val, -p.y_val, -p.z_val])
         o = camera_info.pose.orientation
         # NED to ENU
-        ori = np.array([-o.x_val, o.y_val, -o.z_val, o.w_val])
+        ori = np.array([o.x_val, -o.y_val, -o.z_val, o.w_val])
 
         return fov, pt, ori
 
@@ -105,7 +105,7 @@ class MapperNavNode:
                         x = (u - cx) * z / fx
                         y = (v - cy) * z / fy
                         # rotation 90 deg OX
-                        pcd.append([-z, x, -y])
+                        pcd.append([z, -x, -y])
             
             pos = position
             qtr = orientation
@@ -210,12 +210,6 @@ class MapperNavNode:
             (tx, ty, tz) = pt
             (qx, qy, qz, qw) = qtr
 
-            # Need to rotate 90 deg in Z axis
-            # orig_qtr = R.from_quat(qtr)
-            # z_rot = R.from_euler('z', np.deg2rad(90))
-            # rot_qtr = z_rot * orig_qtr
-            # (qx, qy, qz, qw) = rot_qtr.as_quat()
-            
             pose_stamped = PoseStamped()
             pose_stamped.header.frame_id = "map"
             pose_stamped.header.stamp = rospy.Time.now()
@@ -298,7 +292,7 @@ class MapperNavNode:
     def goal_callback(self, msg):
         position = msg.pose.position
         # pos = tuple(np.array([position.x, position.y, position.z]).astype(int))
-        pos = tuple(np.array([position.x, position.y, 77]).astype(int))
+        pos = tuple(np.array([position.x, position.y, self.vmap.cntr[2]]).astype(int))
         self.vmap.set_goal(pos, update_start=True)
 
 
@@ -330,7 +324,7 @@ class DroneController:
         # self.client.armDisarm(True)
 
     def move_along_path_pos(self):
-        path = [airsim.Vector3r(-x, y, -z) for (x, y, z) in self.path]
+        path = [airsim.Vector3r(x, -y, -z) for (x, y, z) in self.path]
         # print(f"air_path={path}")
         self.client.moveOnPathAsync(
             path=path,
