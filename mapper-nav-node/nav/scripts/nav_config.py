@@ -61,6 +61,8 @@ cam_scaling = 8
 # travel_off = (0, 5, 0) 
 travel_off = (0, 0, 0) 
 
+max_a_star_iters = 500
+
 use_drrt = False
 use_a_star = True
 
