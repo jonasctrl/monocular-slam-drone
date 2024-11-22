@@ -87,7 +87,7 @@ def add_pcd_njit(vox, pcd, cam_pt, resolution, off):
 
 def precompile():
     print(f"precompile ... ", end="")
-    vox = np.empty((4,5,3), dtype=np.int8)
+    vox = np.empty((6,6,6), dtype=np.int8)
     vox.fill(-128)
     vals = np.random.randint(6, 12, size=10, dtype=np.int8)
     for v in vals:
@@ -106,6 +106,7 @@ def precompile():
         2.0,
         np.array((2,1,0)))
 
+    a_star_3d(vox, (1,1,2), (3,4,4))
 
     print(f"done")
 
