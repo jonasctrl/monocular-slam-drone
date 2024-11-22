@@ -1,15 +1,65 @@
 import numpy as np
 import heapq
+from numba import njit
 
 import nav_config as cfg
 
 # Heuristic: Euclidean distance between two points
+# @njit
 def heuristic(p1, p2):
-    return np.linalg.norm(np.array(p1) - np.array(p2))
+    return np.linalg.norm(np.array(p1) - np.array(p2), ord=None)
 
 
+@njit
 def v_empty(v):
     return cfg.occup_unkn == v or cfg.occup_min <= v < cfg.occup_thr
+
+@njit
+def is_inside(pt, bounds):
+    return  0 < pt[0] < bounds[0]-1 and \
+            0 < pt[1] < bounds[1]-1 and \
+            0 <= pt[2] < bounds[2]-1
+
+@njit
+def skip_dangerous_blocks1(cur, pt, diff, grid):
+    (new_x, new_y, new_z) = pt
+    (x, y, z) = cur
+    (dx, dy, dz) = diff
+
+    diag_num = abs(dx) + abs(dy) + abs(dz)
+    if diag_num == 3:
+        if abs(dx) + abs(dy) == 2:
+            if not v_empty(grid[x, y, new_z]) or \
+                not v_empty(grid[new_x, y, z]) or \
+                not v_empty(grid[x, y, new_z]) or \
+                not v_empty(grid[x, new_y, new_z]) or \
+                not v_empty(grid[new_x, y, new_z]) or \
+                not v_empty(grid[new_x, new_y, z]):
+                return True
+    elif diag_num == 2:
+        if abs(dx) + abs(dy) == 2:
+            if not v_empty(grid[new_x, y, new_z]) or \
+                    not v_empty(grid[x, new_y, new_z]):
+                return True
+        elif abs(dy) + abs(dz) == 2:
+            if not v_empty(grid[new_x, y, new_z]) or \
+                    not v_empty(grid[new_x, new_y, z]):
+                return True
+        else:
+            if not v_empty(grid[x, new_y, new_z]) or \
+                    not v_empty(grid[new_x, new_y, z]):
+                return True
+
+    return False
+
+@njit
+def skip_dangerous_blocks2(pt, grid):
+    for dx in [-1, 0, 1]:
+        for dy in [-1, 0, 1]:
+            for dz in [-1, 0, 1]:
+                if not v_empty(grid[pt[0] + dx, pt[1] + dy, pt[2] + dz]):
+                    return True
+    return False
 
 
 # Get neighbors in a 3D grid
@@ -23,36 +73,14 @@ def get_neighbors(node, grid):
                 if dx == 0 and dy == 0 and dz == 0:
                     continue  # Skip the current node
                 new_x, new_y, new_z = x + dx, y + dy, z + dz
-                if 0 <= new_x < grid.shape[0] and 0 <= new_y < grid.shape[1] and 0 <= new_z < grid.shape[2]:
-                    # if abs(dx) + abs(dy) + abs(dz) > 1:
-                        # continue  # Skip diag
-                    diag_num = abs(dx) + abs(dy) + abs(dz)
-                    if diag_num == 3:
-                        if abs(dx) + abs(dy) == 2:
-                            if not v_empty(grid[x, y, new_z]) or \
-                                not v_empty(grid[new_x, y, z]) or \
-                                not v_empty(grid[x, y, new_z]) or \
-                                not v_empty(grid[x, new_y, new_z]) or \
-                                not v_empty(grid[new_x, y, new_z]) or \
-                                not v_empty(grid[new_x, new_y, z]):
-                                continue
-                    elif diag_num == 2:
-                        if abs(dx) + abs(dy) == 2:
-                            if not v_empty(grid[new_x, y, new_z]) or \
-                                    not v_empty(grid[x, new_y, new_z]):
-                                continue
-                        elif abs(dy) + abs(dz) == 2:
-                            if not v_empty(grid[new_x, y, new_z]) or \
-                                    not v_empty(grid[new_x, new_y, z]):
-                                continue
-                        else:
-                            if not v_empty(grid[x, new_y, new_z]) or \
-                                    not v_empty(grid[new_x, new_y, z]):
-                                continue
+                new_pt = (new_x, new_y, new_z)
 
-                        
-                    # if abs(dx) + abs(dy) + abs(dz) > 1:
-                        # continue  # Skip diag
+                if is_inside(new_pt, grid.shape):
+                    # if skip_dangerous_blocks1(node, new_pt, (dx, dy, dz), grid):
+                        # continue
+
+                    if skip_dangerous_blocks2(new_pt, grid):
+                        continue
 
                     if v_empty(grid[new_x, new_y, new_z]):
                     # if cfg.occup_unkn == v or cfg.occup_min <= v < cfg.occup_thr:
@@ -61,6 +89,12 @@ def get_neighbors(node, grid):
 
 # A* algorithm for 3D space
 def a_star_3d(grid, start, goal):
+    for pt in [start, goal]:
+        for pd, gd in zip(pt, grid.shape):
+            if pd < 1 or pd > gd - 2:
+                print(f"{pt} is out of range {grid.shape}")
+                return
+
     # Priority queue for the open list (min-heap)
     open_list = []
     heapq.heappush(open_list, (0, start))  # (cost, node)
