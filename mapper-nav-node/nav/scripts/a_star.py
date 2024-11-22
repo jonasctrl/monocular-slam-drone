@@ -74,18 +74,15 @@ def a_star_3d(grid, start, goal):
     # Dictionary to store the total estimated cost (f = g + h)
     f_cost = {start: heuristic(start, goal)}
     
-    # iters = 0
-    # max_iters = 50
+    iters = 0
     while open_list:
+        iters += 1
         # Get the node with the lowest f_cost
         current_f_cost, current_node = heapq.heappop(open_list)
         
         # If the goal is reached, reconstruct the path
         
-        # iters += 1
-        # if iters > max_iters or current_node == goal:
-            # print(f"path of {iters} iters cost={current_f_cost}")
-        if current_node == goal:
+        if current_node == goal or iters > cfg.max_a_star_iters:
             path = []
             while current_node:
                 path.append(current_node)
