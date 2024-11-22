@@ -63,6 +63,7 @@ def skip_dangerous_blocks2(pt, grid):
 
 
 # Get neighbors in a 3D grid
+@njit
 def get_neighbors(node, grid):
     neighbors = []
     x, y, z = node
