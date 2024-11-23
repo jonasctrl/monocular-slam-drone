@@ -1,29 +1,27 @@
 #!/usr/bin/env python3
 
+import math
+import struct
+import time
+import numpy as np
+
 import rospy
 from sensor_msgs.msg import PointCloud2, PointField
 from sensor_msgs import point_cloud2 as pc2
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, PointStamped, Point
 from std_msgs.msg import Header
-# from nav.msg import Pcd2WithPose, DepthWithPose
-from cv_bridge import CvBridge
-import math
-import struct
 
+
+# from cv_bridge import CvBridge
 import airsim
-# import math
-import numpy as np
-# from scipy.spatial.transform import Rotation as R
-import time
 
 from mapper import VoxArray, precompile
-
+from modules.depth_anything_module import DepthAnythingEstimatorModule
 import nav_config as cfg
 
 
 HEIGHT, WIDTH = 144, 256
-# CAMERA = "fc"
 CAMERA = "front-center"
 RATE = 5
 PTS_MULT = 2
@@ -36,12 +34,14 @@ class MapperNavNode:
         self.sequence = 0
         self.vmap = VoxArray(resolution=cfg.map_resolution, shape=(cfg.map_width,cfg.map_depth,cfg.map_heigth))
         rospy.init_node('mapper_nav', anonymous=True)
+
+        self.depth_estimator_module = DepthAnythingEstimatorModule()
         
         self.client = airsim.MultirotorClient(ip="host.docker.internal", port=41451)
         self.client.confirmConnection()
         self.ctl = DroneController(self.client)
 
-        self.bridge = CvBridge()
+        # self.bridge = CvBridge()
         self.occupied_pub = rospy.Publisher('/occupied_space', PointCloud2, queue_size=1)
         self.empty_pub = rospy.Publisher('/empty_space', PointCloud2, queue_size=1)
         self.cam_path_pub = rospy.Publisher('/cam_path', Path, queue_size=1)
@@ -59,116 +59,9 @@ class MapperNavNode:
 
         rospy.loginfo("Mapper-Navigation node initialized.")
 
-
-    def get_camera_info(self):
-        camera_info = self.client.simGetCameraInfo(CAMERA)
-        fov = camera_info.fov
-
-        p = camera_info.pose.position
-        # NED to ENU
-        pt = np.array([p.x_val, -p.y_val, -p.z_val])
-        o = camera_info.pose.orientation
-        # NED to ENU
-        ori = np.array([o.x_val, -o.y_val, -o.z_val, o.w_val])
-
-        return fov, pt, ori
-
-
-    def step(self):
-        if True:
-        # try:
-            # print(f"step[{self.sequence}]")
-            # Get camera position and orientation
-            fov, position, orientation = self.get_camera_info()
-
-            response = self.client.simGetImages(
-                [airsim.ImageRequest(CAMERA, airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=False)])[0]
-            depth_data = np.array(response.image_data_float, dtype=np.float32).reshape(response.height, response.width)
-            
-            image_width = response.width
-            image_height = response.height
-
-            # Compute fx and fy from FOV
-            hfov_rad = fov * math.pi / 180.0
-            fx = (image_width / 2.0) / math.tan(hfov_rad / 2.0)
-            fy = fx
-            # Compute principal point coordinates
-            cx = image_width / 2.0
-            cy = image_height / 2.0
-
-            # Compute 3D points from the depth map
-            pcd = []
-            for v in range(0, response.height, cfg.dimg_stride):
-                for u in range(0, response.width, cfg.dimg_stride):
-                    # print(f"{[v, u, depth_data[v, u]]}")
-                    z = depth_data[v, u]
-                    if z >= cfg.dimg_min_depth and z < cfg.dimg_max_depth:
-                        x = (u - cx) * z / fx
-                        y = (v - cy) * z / fy
-                        # rotation 90 deg OX
-                        pcd.append([z, -x, -y])
-            
-            pos = position
-            qtr = orientation
-            is_glob_fame = False
-
-            t1 = time.time()
-
-    
-            # print(f"step[{self.sequence}] updating map")
-            ch_pts = self.vmap.update(pcd, pos, qtr, is_glob_fame)
-            
-            t2 = time.time()
-            # print(f"step[{self.sequence}] planning")
-            self.vmap.plan(ch_pts)
-            t3 = time.time()
-
-
-            # print(f"step[{self.sequence}] getting plan")
-            path, _ = self.vmap.get_plan(orig_coord=True)
-            # print(f"path={path}")
-
-            # print(f"step[{self.sequence}] moving")
-            if len(path) > 1:
-                self.ctl.path = path
-                self.ctl.move_along_path_pos()
-
-                # self.vmap.plan_path = []
-                # self.vmap.plan_qtrs = []
-
-
-
-            t4 = time.time()
-
-            
-            # print(f"step[{self.sequence}] publishing")
-            if cfg.publish_occup:
-                self.publish_occupied_space_msg()
-
-            if cfg.publish_empty:
-                self.publish_empty_space_msg()
-            
-            if cfg.publish_pose:
-                self.publish_map_pose_msg()
-
-
-            if cfg.publish_path:
-                self.publish_cam_path_msg()
-
-            if cfg.publish_plan:
-                self.publish_start_msg()
-                self.publish_goal_msg()
-                self.publish_plan_path_msg(orig=False) # Map scale
-                self.publish_plan_path_msg(orig=True) # Original scale
-
-            t5 = time.time()
-
-            print(f"mapping:{round(t2-t1, 4)} planning:{round(t3-t2, 4)} move:{round(t4-t3, 4)} pub:{round(t5-t4, 4)}")
-            
-
-        # except Exception as e:
-            # rospy.logerr(f"Error in step: {str(e)}")
-
+    ################
+    #  PUBLISHERS  #
+    ################
 
     def publish_cam_path_msg(self):
         path_msg = Path()
@@ -318,11 +211,148 @@ class MapperNavNode:
 
         self.empty_pub.publish(pcd_msg)
 
+    ################
+    #  SUBSCRIBERS #
+    ################
+
     def goal_callback(self, msg):
         position = msg.pose.position
         # pos = tuple(np.array([position.x, position.y, position.z]).astype(int))
         pos = tuple(np.array([position.x, position.y, self.vmap.cntr[2]]).astype(int))
         self.vmap.set_goal(pos, update_start=True)
+
+    ######################
+    #  DEPTH ESTIMATION  #
+    ######################
+    
+    def estimate_depth(self):
+        response = self.client.simGetImages([
+            airsim.ImageRequest(CAMERA, airsim.ImageType.Scene, pixels_as_float=False, compress=False)
+            ])[0]
+
+        # if response.width == 0:
+            # rospy.logwarn("Failed to get valid image from AirSim camera")
+            # return None
+
+        img_rgb = np.frombuffer(response.image_data_uint8, dtype=np.uint8).reshape(response.height, response.width, 3)
+
+        depth_map = self.depth_estimator_module.generate_depth_map(img_rgb)
+
+        return depth_map
+        
+    
+    def get_direct_depth(self):
+        response = self.client.simGetImages(
+            [airsim.ImageRequest(CAMERA, airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=False)])[0]
+
+        # if response.width == 0:
+            # rospy.logwarn("Failed to get valid image from AirSim camera")
+            # return None
+
+        depth_map= np.array(response.image_data_float, dtype=np.float32).reshape(response.height, response.width)
+        return depth_map
+        
+
+    def depth_img_to_pcd(self, dimg, fov):
+        (image_height, image_width) = dimg.shape
+
+        # Compute fx and fy from FOV
+        hfov_rad = fov * math.pi / 180.0
+        fx = (image_width / 2.0) / math.tan(hfov_rad / 2.0)
+        fy = fx
+        # Compute principal point coordinates
+        cx = image_width / 2.0
+        cy = image_height / 2.0
+
+        # Compute 3D points from the depth map
+        pcd = []
+        for v in range(0, image_height, cfg.dimg_stride):
+            for u in range(0, image_width, cfg.dimg_stride):
+                z = dimg[v, u]
+                if z >= cfg.dimg_min_depth and z < cfg.dimg_max_depth:
+                    x = (u - cx) * z / fx
+                    y = (v - cy) * z / fy
+                    # rotation 90 deg OX
+                    pcd.append([z, -x, -y])
+
+        return pcd
+        
+
+    def get_camera_info(self):
+        camera_info = self.client.simGetCameraInfo(CAMERA)
+        fov = camera_info.fov
+
+        p = camera_info.pose.position
+        # NED to ENU
+        pt = np.array([p.x_val, -p.y_val, -p.z_val])
+        o = camera_info.pose.orientation
+        # NED to ENU
+        ori = np.array([o.x_val, -o.y_val, -o.z_val, o.w_val])
+
+        return fov, pt, ori
+
+
+    def step(self):
+        t0 = time.time()
+        fov, position, orientation = self.get_camera_info()
+
+        if cfg.use_rgb_imaging:
+            depth_data = self.estimate_depth()
+        else:
+            depth_data = self.get_direct_depth()
+
+        if depth_data is None:
+            rospy.logwarn("No depth data")
+        
+
+        t1 = time.time()
+
+        pcd = self.depth_img_to_pcd(depth_data, fov)
+        
+        pos = position
+        qtr = orientation
+
+        t2 = time.time()
+
+        ch_pts = self.vmap.update(pcd, pos, qtr, False)
+        
+        t3 = time.time()
+        self.vmap.plan(ch_pts)
+        t4 = time.time()
+
+
+        path, _ = self.vmap.get_plan(orig_coord=True)
+
+        if len(path) > 1:
+            self.ctl.path = path
+            self.ctl.move_along_path_pos()
+
+
+        t5 = time.time()
+        
+        if cfg.publish_occup:
+            self.publish_occupied_space_msg()
+
+        if cfg.publish_empty:
+            self.publish_empty_space_msg()
+        
+        if cfg.publish_pose:
+            self.publish_map_pose_msg()
+
+
+        if cfg.publish_path:
+            self.publish_cam_path_msg()
+
+        if cfg.publish_plan:
+            self.publish_start_msg()
+            self.publish_goal_msg()
+            self.publish_plan_path_msg(orig=False) # Map scale
+            self.publish_plan_path_msg(orig=True) # Original scale
+
+        t6 = time.time()
+
+        print(f"img: {round(t1-t0, 3)} to_pcd:{round(t2-t1, 3)} map:{round(t3-t2, 3)} plan:{round(t4-t3, 3)} move:{round(t5-t4, 3)} pub:{round(t6-t5, 3)}")
+            
 
 
     def run(self):
@@ -335,9 +365,9 @@ class MapperNavNode:
             rate.sleep()
 
 
-##############
-#  pathhing  #
-##############
+##################
+#  DRONE CONTROL #
+##################
 
 class DroneController:
     def __init__(self, client):
@@ -368,6 +398,7 @@ class DroneController:
 
 if __name__ == '__main__':
     try:
+        print(f"using rgb: {cfg.use_rgb_imaging}")
         precompile()
 
         node = MapperNavNode()

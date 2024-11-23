@@ -94,7 +94,7 @@ def a_star_3d(grid, start, goal):
         for pd, gd in zip(pt, grid.shape):
             if pd < 1 or pd > gd - 2:
                 print(f"{pt} is out of range {grid.shape}")
-                return
+                return []
 
     # Priority queue for the open list (min-heap)
     open_list = []
