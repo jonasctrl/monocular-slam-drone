@@ -24,8 +24,8 @@ ray_hit_incr = 7
 
 # map_resolution = 0.5
 # map_resolution = 1
-# map_resolution = 1.5
-map_resolution = 2
+map_resolution = 1.5
+# map_resolution = 2
 # map_resolution = 2.89
 # map_resolution = 3
 # map_resolution = 4
@@ -36,19 +36,12 @@ map_resolution = 2
 #  data proccessing  #
 ######################
 
+use_rgb_imaging = True
+# use_rgb_imaging = False
+
 dimg_stride = 2
 dimg_min_depth = 1
 dimg_max_depth = 50
-
-###############
-#  maze part  #
-###############
-
-
-cam_w = 18
-cam_h = 12
-cam_depth = 9
-cam_scaling = 8
 
 
 
