@@ -6,7 +6,9 @@ import numpy as np
 
 # MODELS:
 default_model_type = "depth-anything/Depth-Anything-V2-Metric-Outdoor-Large-hf"
-#default_model_type = "depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf"
+# default_model_type = "depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf"
+# default_model_type = "depth-anything/Depth-Anything-V2-Small-hf"
+# default_model_type = "depth-anything/Depth-Anything-V2-Large-hf"
 
 class DepthAnythingEstimatorModule:
     def __init__(self, model_type=default_model_type):

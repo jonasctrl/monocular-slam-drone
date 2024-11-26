@@ -20,6 +20,7 @@ occup_fade = -1
 
 ray_miss_incr = -1
 ray_hit_incr = 7
+# ray_hit_incr = 9
 
 
 # map_resolution = 0.5
@@ -35,6 +36,9 @@ map_resolution = 1.5
 ######################
 #  data proccessing  #
 ######################
+
+# use_opencv_imaging = True
+use_opencv_imaging = False
 
 use_rgb_imaging = True
 # use_rgb_imaging = False
