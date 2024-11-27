@@ -13,6 +13,11 @@ from geometry_msgs.msg import PoseStamped, PointStamped, Point
 from std_msgs.msg import Header
 
 
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+from scipy.spatial.transform import Rotation as R
+
 # from cv_bridge import CvBridge
 import airsim
 
@@ -22,12 +27,132 @@ import nav_config as cfg
 
 
 HEIGHT, WIDTH = 144, 256
-CAMERA = "front-center"
+# CAMERA = "front-center"
+CAMERA = "fc"
 RATE = 5
 PTS_MULT = 2
 
 g_num = 0
+plt.ion()
 
+class CV2_ORB:
+    def __init__(self):
+        self.orb  = cv2.ORB_create()
+        self.last_img = None
+        self.last_kp = None
+        self.last_des  = None
+        # self.last_pts = None
+        self.last_pos = None
+        self.last_P = None
+
+        self.img_idx = 0
+        
+        self.FLANN_INDEX_LSH = 6
+        self.index_params= dict(algorithm = self.FLANN_INDEX_LSH,
+                           table_number = 6, # 12
+                           key_size = 12,     # 20
+                           multi_probe_level = 1) #2
+        self.search_params = dict(checks=50)
+
+
+        # Compute fx and fy from FOV
+        hfov_rad = 90 * math.pi / 180.0
+        fx = (255 / 2.0) / math.tan(hfov_rad / 2.0)
+        fy = fx
+        # Compute principal point coordinates
+        cx = 255 / 2.0
+        cy = 144 / 2.0
+
+        self.K = np.array([[fx, 0, cx],
+                          [0, fy, cy],
+                          [0, 0, 1]])
+
+    def __quaternion_to_rotation_matrix(self, q):
+        return R.from_quat(q).as_matrix()
+
+    def __triangulate_points(self, proj_matrix1, proj_matrix2, points1, points2):
+        try:
+            points_homogeneous = cv2.triangulatePoints(proj_matrix1, proj_matrix2, points1.T, points2.T)
+        except:
+            print(f"ERROR")
+            breakpoint()
+        points_3d = points_homogeneous[:3] / points_homogeneous[3]  # Convert to non-homogeneous
+        return points_3d.T
+
+    def process_gray(self, img, pos, qtr):
+        pcd = []
+
+        if self.last_img is not None:
+            dist = np.linalg.norm(np.array(self.last_pos) - np.array(pos))
+            if dist < 0.2:
+                print(f"Not enough movement {round(dist, 3)}")
+                return pcd
+
+        kp, des = self.orb.detectAndCompute(img, None)
+
+        rot = self.__quaternion_to_rotation_matrix(qtr)
+        P = self.K @ np.hstack((rot, pos.reshape(-1, 1)))  # Projection matrix
+
+        if self.last_img is not None:
+            
+            
+            flann = cv2.FlannBasedMatcher(self.index_params,self.search_params)
+ 
+            try:
+                all_matches = flann.knnMatch(self.last_des,des,k=2)
+            except:
+                print(f"ERROR")
+                breakpoint()
+            # ratio test as per Lowe's paper
+            matches = []
+            for match in all_matches:
+                if len(match) < 2:
+                    continue
+                (m, n) = match
+                if m.distance < 0.7 * n.distance:  # Lowe's ratio test
+                    matches.append(m)
+
+            
+            
+            # bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+            # matches = bf.match(self.last_des, des)
+            # matches = sorted(matches, key=lambda x: x.distance)
+
+            last_pts = np.float32([self.last_kp[m.queryIdx].pt for m in matches])
+            pts = np.float32([kp[m.trainIdx].pt for m in matches])
+
+
+            if len(pts) > 0 and len(last_pts) > 0:
+                pcd = self.__triangulate_points(self.last_P, P, last_pts, pts)
+                pcd = [[z, -x, -y] for (x, y, z) in pcd]
+
+            print(f"matches.len={len(pcd)}")
+            
+            # for i, depth in enumerate(points_3d[:10]):  # Show first 10 depths as an example
+                # print(f"Keypoint {i + 1}: Depth = {depth[2]:.2f} units")
+
+            img_matches = cv2.drawMatches(self.last_img, self.last_kp, img, kp, matches[:50], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+
+# Display the matches
+            cv2.imwrite(f"./img_nh/matches_{self.img_idx:04d}.jpg", img_matches)
+            self.img_idx += 1
+            # plt.figure(figsize=(12, 6))
+            # plt.title('ORB Feature Matching')
+            # plt.imshow(img_matches)
+            # plt.axis('off')
+            # plt.pause(0.05)
+            # plt.show()
+            # breakpoint()
+
+        self.last_img = img
+        self.last_kp = kp
+        self.last_des = des
+        self.last_pos = pos
+        self.last_P = P
+
+
+        return pcd
+        
 
 class MapperNavNode:
     def __init__(self):
@@ -36,6 +161,7 @@ class MapperNavNode:
         rospy.init_node('mapper_nav', anonymous=True)
 
         self.depth_estimator_module = DepthAnythingEstimatorModule()
+        self.cv_orb = CV2_ORB()
         
         self.client = airsim.MultirotorClient(ip="host.docker.internal", port=41451)
         self.client.confirmConnection()
@@ -224,24 +350,32 @@ class MapperNavNode:
     ######################
     #  DEPTH ESTIMATION  #
     ######################
-    
-    def estimate_depth(self):
+
+    def get_rgb_img(self):
         response = self.client.simGetImages([
             airsim.ImageRequest(CAMERA, airsim.ImageType.Scene, pixels_as_float=False, compress=False)
             ])[0]
 
-        # if response.width == 0:
-            # rospy.logwarn("Failed to get valid image from AirSim camera")
-            # return None
-
         img_rgb = np.frombuffer(response.image_data_uint8, dtype=np.uint8).reshape(response.height, response.width, 3)
+        return img_rgb
 
+    def get_gray_img(self):
+        img_rgb = self.get_rgb_img()
+        img_gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+        return img_gray
+
+    
+    def estimate_depth(self):
+        img_rgb = self.get_rgb_img()
+
+        # depth_map = self.depth_estimator_module.generate_depth_map(img_rgb) - 70
         depth_map = self.depth_estimator_module.generate_depth_map(img_rgb)
 
+        # breakpoint()
         return depth_map
         
     
-    def get_direct_depth(self):
+    def get_depth_img(self):
         response = self.client.simGetImages(
             [airsim.ImageRequest(CAMERA, airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=False)])[0]
 
@@ -255,6 +389,10 @@ class MapperNavNode:
 
     def depth_img_to_pcd(self, dimg, fov):
         (image_height, image_width) = dimg.shape
+        
+        factor = 1.0
+        if cfg.use_rgb_imaging:
+            factor = 2.5
 
         # Compute fx and fy from FOV
         hfov_rad = fov * math.pi / 180.0
@@ -268,7 +406,8 @@ class MapperNavNode:
         pcd = []
         for v in range(0, image_height, cfg.dimg_stride):
             for u in range(0, image_width, cfg.dimg_stride):
-                z = dimg[v, u]
+                # z = dimg[v, u]
+                z = dimg[v, u] / factor
                 if z >= cfg.dimg_min_depth and z < cfg.dimg_max_depth:
                     x = (u - cx) * z / fx
                     y = (v - cy) * z / fy
@@ -293,13 +432,14 @@ class MapperNavNode:
 
 
     def step(self):
+
         t0 = time.time()
         fov, position, orientation = self.get_camera_info()
 
         if cfg.use_rgb_imaging:
             depth_data = self.estimate_depth()
         else:
-            depth_data = self.get_direct_depth()
+            depth_data = self.get_depth_img()
 
         if depth_data is None:
             rospy.logwarn("No depth data")
@@ -307,7 +447,14 @@ class MapperNavNode:
 
         t1 = time.time()
 
-        pcd = self.depth_img_to_pcd(depth_data, fov)
+        if cfg.use_opencv_imaging:
+            img_gray = self.get_gray_img()
+            pcd = self.cv_orb.process_gray(img_gray, position, orientation)
+
+            if len(pcd) == 0:
+                return 
+        else:
+            pcd = self.depth_img_to_pcd(depth_data, fov)
         
         pos = position
         qtr = orientation
@@ -351,6 +498,7 @@ class MapperNavNode:
 
         t6 = time.time()
 
+        # print(f"cv: {round(t0-t_1, 3)} img: {round(t1-t0, 3)} to_pcd:{round(t2-t1, 3)} map:{round(t3-t2, 3)} plan:{round(t4-t3, 3)} move:{round(t5-t4, 3)} pub:{round(t6-t5, 3)}")
         print(f"img: {round(t1-t0, 3)} to_pcd:{round(t2-t1, 3)} map:{round(t3-t2, 3)} plan:{round(t4-t3, 3)} move:{round(t5-t4, 3)} pub:{round(t6-t5, 3)}")
             
 
@@ -373,6 +521,7 @@ class DroneController:
     def __init__(self, client):
         self.client = client
         self.speed = 5.0
+        # self.speed = 2.0
         self.path = []
 
 

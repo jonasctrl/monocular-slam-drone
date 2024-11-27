@@ -110,6 +110,16 @@ def precompile():
 
     print(f"done")
 
+def make_fat_path(path):
+    fat_path = set()
+    for p in path:
+        for i in [-1, 0, 1]:
+            for j in [-1, 0, 1]:
+                for k in [-1, 0, 1]:
+                    fat_path.add((p[0] + i, p[1] + j, p[2] + k))
+    return fat_path
+
+
 class VoxArray:
     def __init__(self, resolution:float, shape:tuple):
         self.shp = np.array(shape).astype(int)
@@ -125,6 +135,7 @@ class VoxArray:
         self.cam_path_acc = []
         self.cam_qtrs = []
 
+        self.fat_path = set()
         self.plan_path = []
         self.plan_qtrs = []
         
@@ -289,29 +300,16 @@ class VoxArray:
         print(f"{c} is NOT on the path")
         return False
 
-        
-    def __is_on_path(self, c):
-        if len(self.plan_path) == 0:
-            return True
-        for i, p in enumerate(self.plan_path[:-1]):
-            if p == c:
-                print(f"{c} is on the path")
-                # self.plan_path = self.plan_path[i:]
-                return True
-
-        print(f"{c} is NOT on the path")
-        return False
-
 
     def __do_obst_interfere(self, path, obst):
         new_obst = [(x, y, z) for x, y, z, v in obst if v == -1]
 
-        common = set(path).intersection(new_obst)
+        common = set(path).intersection(set(new_obst))
         interf = len(common) > 0
-        
+
         return interf
-        
-        
+
+
     def __set_plan_qtrs(self):
         nav_qtrs = []
         for i in range(len(self.plan_path) - 1):
@@ -325,8 +323,8 @@ class VoxArray:
 
 
         self.plan_qtrs = nav_qtrs
-        
-        
+
+
     def do_need_new_plan(self, ch_pts):
         if self.updated_start_or_goal:
             return True
@@ -370,6 +368,7 @@ class VoxArray:
             print(f"new plan {self.start} => {self.goal}")
 
             self.plan_path = a_star_3d(self.vox, self.pos, self.goal)
+            self.fat_path = make_fat_path(self.plan_path)
             self.updated_start_or_goal = False
             print(f"found path={self.plan_path}")
             self.__set_plan_qtrs()
