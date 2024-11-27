@@ -64,7 +64,7 @@ def skip_dangerous_blocks2(pt, grid):
 
 # Get neighbors in a 3D grid
 @njit
-def get_neighbors(node, grid):
+def get_neighbors(node, grid, height_restr):
     neighbors = []
     x, y, z = node
     # Check all possible directions in a 3D grid (26 possible neighbors)
@@ -75,6 +75,9 @@ def get_neighbors(node, grid):
                     continue  # Skip the current node
                 new_x, new_y, new_z = x + dx, y + dy, z + dz
                 new_pt = (new_x, new_y, new_z)
+
+                if new_z < height_restr[0] or new_z > height_restr[1]:
+                    continue  # Skip too low or too high voxels
 
                 if is_inside(new_pt, grid.shape):
                     # if skip_dangerous_blocks1(node, new_pt, (dx, dy, dz), grid):
@@ -89,7 +92,8 @@ def get_neighbors(node, grid):
     return neighbors
 
 # A* algorithm for 3D space
-def a_star_3d(grid, start, goal):
+def a_star_3d(grid, start, goal, height_restr):
+    print(f"height_restr={height_restr}")
     for pt in [start, goal]:
         for pd, gd in zip(pt, grid.shape):
             if pd < 1 or pd > gd - 2:
@@ -125,7 +129,7 @@ def a_star_3d(grid, start, goal):
             return path[::-1]  # Returnreversed path (from start to goal)
         
         # Explore neighbors
-        for neighbor in get_neighbors(current_node, grid):
+        for neighbor in get_neighbors(current_node, grid, height_restr):
             tentative_g_cost = g_cost[current_node] + 1  # Cost from start to neighbor (assuming uniform grid)
 
             if neighbor not in g_cost or tentative_g_cost < g_cost[neighbor]:

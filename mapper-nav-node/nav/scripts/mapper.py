@@ -106,7 +106,7 @@ def precompile():
         2.0,
         np.array((2,1,0)))
 
-    a_star_3d(vox, (1,1,2), (3,4,4))
+    a_star_3d(vox, (1,1,2), (3,4,4), (1,3))
 
     print(f"done")
 
@@ -140,8 +140,9 @@ class VoxArray:
         self.plan_qtrs = []
         
         self.has_init_off = False
-        self.init_off = np.array([0,0,0])
-        self.init_pos = self.cntr.copy()
+        self.init_off = np.array([0.,0.,0.])
+        self.init_off_round = np.array([0,0,0])
+        # self.init_pos = self.cntr.copy()
         self.start:tuple = tuple(self.cntr)
         self.updated_start_or_goal:bool = False
 
@@ -162,7 +163,8 @@ class VoxArray:
         # pf_start = (self.pos[0],self.pos[1])
         # pf_goal = (self.goal[0],self.goal[1])
         # print(f"init pf start={pf_start} goal={pf_goal}")
-        self.pf = DRRT(start=self.pos, goal=self.goal, shape=(shape[0], shape[1]), step_size=1, max_iter=200, goal_sample_rate=0.2)
+        if cfg.use_drrt:
+            self.pf = DRRT(start=self.pos, goal=self.goal, shape=(shape[0], shape[1]), step_size=1, max_iter=200, goal_sample_rate=0.2)
 
 
     def get_pose(self, orig_coord=True):
@@ -249,7 +251,7 @@ class VoxArray:
         if not self.has_init_off:
             self.has_init_off = True
             self.init_off = np.array([cam_pos]) / self.res
-        
+            self.init_off_round = np.round(self.init_off[0]).astype(int)
         
         c = tuple(self.point_to_map(np.array([cam_pos]))[0])
         c_acc = tuple(self.point_to_map_acc(np.array([cam_pos]))[0])
@@ -329,7 +331,7 @@ class VoxArray:
         if self.updated_start_or_goal:
             return True
 
-        if not self.__is_on_path_soft(tolerance=cfg.path_tolerance):
+        if not self.__is_on_path_soft(tolerance=cfg.path_drift_tolerance):
             return True
 
         # if not self.__is_on_path(self.pos):
@@ -366,8 +368,18 @@ class VoxArray:
                 # self.plan_qtrs = self.plan_qtrs[1:]
         else:
             print(f"new plan {self.start} => {self.goal}")
+            if cfg.use_real_heigth_tolerances:
+               tolerances = \
+                   (self.cntr[2] + int(round(cfg.path_heigth_neg_real_tol / cfg.map_resolution)),\
+                   self.cntr[2] + int(round(cfg.path_heigth_pos_real_tol / cfg.map_resolution)))
+            else:
+               tolerances = (self.cntr[2] + cfg.path_heigth_neg_vox_tol,\
+                   self.cntr[2] + cfg.path_heigth_pos_vox_tol)
 
-            self.plan_path = a_star_3d(self.vox, self.pos, self.goal)
+
+            self.plan_path = a_star_3d(self.vox, self.pos, self.goal, tolerances)
+                    # (self.cntr[2] + self.init_off_round[2] + cfg.path_heigth_neg_vox_tol,\
+                   # self.cntr[2] + self.init_off_round[2] + cfg.path_heigth_pos_vox_tol))
             self.fat_path = make_fat_path(self.plan_path)
             self.updated_start_or_goal = False
             print(f"found path={self.plan_path}")

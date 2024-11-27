@@ -63,7 +63,16 @@ max_a_star_iters = 500
 use_drrt = False
 use_a_star = True
 
-path_tolerance = 3.0
+path_drift_tolerance = 3.0
+
+path_heigth_pos_vox_tol = 2
+path_heigth_neg_vox_tol = -2
+
+path_heigth_pos_real_tol = 3
+path_heigth_neg_real_tol = -3
+
+use_real_heigth_tolerances = True
+# use_real_heigth_tolerances = False
 
 
 ################
