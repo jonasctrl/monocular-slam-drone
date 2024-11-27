@@ -40,8 +40,8 @@ map_resolution = 1.5
 # use_opencv_imaging = True
 use_opencv_imaging = False
 
-use_rgb_imaging = True
-# use_rgb_imaging = False
+# use_rgb_imaging = True
+use_rgb_imaging = False
 
 dimg_stride = 2
 dimg_min_depth = 1
