@@ -138,6 +138,7 @@ class VoxArray:
         self.fat_path = set()
         self.plan_path = []
         self.plan_qtrs = []
+        self.plan_unf = False
         
         self.has_init_off = False
         self.init_off = np.array([0.,0.,0.])
@@ -276,8 +277,6 @@ class VoxArray:
 
         return ch_pts
 
-        
-
     def plan(self, ch_pts):
         self.start = self.pos
         if cfg.use_a_star:
@@ -285,9 +284,7 @@ class VoxArray:
         elif cfg.use_drrt:
             self.plan_drrt(ch_pts)
         
-        
-        
-    def __is_on_path_soft(self, tolerance:float) -> bool:
+    def __is_not_on_path_soft(self, tolerance:float) -> bool:
         # return True
         if len(self.plan_path) == 0:
             return True
@@ -303,7 +300,7 @@ class VoxArray:
         return False
 
 
-    def __do_obst_interfere(self, path, obst):
+    def __is_obst_interfere(self, path, obst):
         new_obst = [(x, y, z) for x, y, z, v in obst if v == -1]
 
         common = set(path).intersection(set(new_obst))
@@ -311,6 +308,9 @@ class VoxArray:
 
         return interf
 
+
+    def __is_unfinished_plan(self):
+        return self.plan_unf and len(self.plan_path) < cfg.unf_plan_limit
 
     def __set_plan_qtrs(self):
         nav_qtrs = []
@@ -328,16 +328,22 @@ class VoxArray:
 
 
     def do_need_new_plan(self, ch_pts):
+        # Was start or goal location uptated manally?
         if self.updated_start_or_goal:
             return True
 
-        if not self.__is_on_path_soft(tolerance=cfg.path_drift_tolerance):
+        # Do we need to replan because previous path planning was cut short
+        # due to iteration limit, and that (unfinished) path is nearing to
+        # the end. Thus, we need to replan again in order to not to stop prematurely 
+        if self.__is_unfinished_plan():
             return True
 
-        # if not self.__is_on_path(self.pos):
-            # return True
+        # Is drone not on the planned path (with given voxel tolerence)?
+        if not self.__is_not_on_path_soft(tolerance=cfg.path_drift_tolerance):
+            return True
 
-        if self.__do_obst_interfere(self.plan_path, ch_pts):
+        # Are newly found obstaces on the 'fat' path (path whith one voxel clearance)?
+        if self.__is_obst_interfere(self.plan_path, ch_pts):
             return True
 
         return False
@@ -362,10 +368,6 @@ class VoxArray:
     def plan_a_star(self, ch_pts):
         if not self.do_need_new_plan(ch_pts):
             self.walk_path()
-            # if len(self.plan_path) > 0:
-                # self.plan_path = self.plan_path[1:]
-            # if len(self.plan_qtrs) > 0:
-                # self.plan_qtrs = self.plan_qtrs[1:]
         else:
             print(f"new plan {self.start} => {self.goal}")
             if cfg.use_real_heigth_tolerances:
@@ -377,9 +379,7 @@ class VoxArray:
                    self.cntr[2] + cfg.path_heigth_pos_vox_tol)
 
 
-            self.plan_path = a_star_3d(self.vox, self.pos, self.goal, tolerances)
-                    # (self.cntr[2] + self.init_off_round[2] + cfg.path_heigth_neg_vox_tol,\
-                   # self.cntr[2] + self.init_off_round[2] + cfg.path_heigth_pos_vox_tol))
+            self.plan_path, self.plan_unf = a_star_3d(self.vox, self.pos, self.goal, tolerances)
             self.fat_path = make_fat_path(self.plan_path)
             self.updated_start_or_goal = False
             print(f"found path={self.plan_path}")
