@@ -279,10 +279,10 @@ class VoxArray:
 
     def plan(self, ch_pts):
         self.start = self.pos
-        if cfg.use_a_star:
-            self.plan_a_star(ch_pts)
-        elif cfg.use_drrt:
+        if cfg.use_drrt:
             self.plan_drrt(ch_pts)
+        elif cfg.use_a_star:
+            self.plan_a_star(ch_pts)
         
     def __is_not_on_path_soft(self, tolerance:float) -> bool:
         # return True

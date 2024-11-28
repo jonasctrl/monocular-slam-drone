@@ -26,13 +26,6 @@ from modules.depth_anything_module import DepthAnythingEstimatorModule
 import nav_config as cfg
 
 
-HEIGHT, WIDTH = 144, 256
-# CAMERA = "front-center"
-CAMERA = "fc"
-RATE = 5
-PTS_MULT = 2
-
-g_num = 0
 plt.ion()
 
 class CV2_ORB:
@@ -165,9 +158,17 @@ class MapperNavNode:
         
         self.client = airsim.MultirotorClient(ip="host.docker.internal", port=41451)
         self.client.confirmConnection()
+        if cfg.reset_sim:
+            print(f"Reseting simulation ... ", end="")
+            self.client.reset()
+            self.client.enableApiControl(True)
+            self.client.takeoffAsync().join()
+            # self.client.armDisarm(True)
+            print(f"Reseting simulation ... ", end="")
+
         self.ctl = DroneController(self.client)
 
-        # self.bridge = CvBridge()
+
         self.occupied_pub = rospy.Publisher('/occupied_space', PointCloud2, queue_size=1)
         self.empty_pub = rospy.Publisher('/empty_space', PointCloud2, queue_size=1)
         self.cam_path_pub = rospy.Publisher('/cam_path', Path, queue_size=1)
@@ -178,12 +179,9 @@ class MapperNavNode:
         self.start_pub = rospy.Publisher('/nav_start', PointStamped, queue_size=1)
         self.goal_pub = rospy.Publisher('/nav_goal', PointStamped, queue_size=1)
 
-        # self.depth_sub = rospy.Subscriber('/ground_truth/depth_with_pose', DepthWithPose, self.image_callback)
-        # self.depth_sub = rospy.Subscriber('/cam_pcd_pose', Pcd2WithPose, self.pcd_pose_callback, queue_size=1)
         self.goal_sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.goal_callback, queue_size=1)
-        # self.depth_sub = rospy.Subscriber('/cam_pcd_pose', Pcd2WithPose, self.pcd_pose_callback, queue_size=1)
 
-        rospy.loginfo("Mapper-Navigation node initialized.")
+        rospy.loginfo("Mapper-Navigation initialized.")
 
     ################
     #  PUBLISHERS  #
@@ -353,7 +351,7 @@ class MapperNavNode:
 
     def get_rgb_img(self):
         response = self.client.simGetImages([
-            airsim.ImageRequest(CAMERA, airsim.ImageType.Scene, pixels_as_float=False, compress=False)
+            airsim.ImageRequest(cfg.camera_name, airsim.ImageType.Scene, pixels_as_float=False, compress=False)
             ])[0]
 
         img_rgb = np.frombuffer(response.image_data_uint8, dtype=np.uint8).reshape(response.height, response.width, 3)
@@ -377,7 +375,7 @@ class MapperNavNode:
     
     def get_depth_img(self):
         response = self.client.simGetImages(
-            [airsim.ImageRequest(CAMERA, airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=False)])[0]
+            [airsim.ImageRequest(cfg.camera_name, airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=False)])[0]
 
         # if response.width == 0:
             # rospy.logwarn("Failed to get valid image from AirSim camera")
@@ -418,7 +416,7 @@ class MapperNavNode:
         
 
     def get_camera_info(self):
-        camera_info = self.client.simGetCameraInfo(CAMERA)
+        camera_info = self.client.simGetCameraInfo(cfg.camera_name)
         fov = camera_info.fov
 
         p = camera_info.pose.position
@@ -471,8 +469,7 @@ class MapperNavNode:
         path, _ = self.vmap.get_plan(orig_coord=True)
 
         if len(path) > 1:
-            self.ctl.path = path
-            self.ctl.move_along_path_pos()
+            self.ctl.move_along_path(path)
 
 
         t5 = time.time()
@@ -504,7 +501,7 @@ class MapperNavNode:
 
 
     def run(self):
-        rate = rospy.Rate(RATE)
+        rate = rospy.Rate(cfg.max_sim_freq)
 
         while not rospy.is_shutdown():
             self.step()
@@ -520,23 +517,13 @@ class MapperNavNode:
 class DroneController:
     def __init__(self, client):
         self.client = client
-        self.speed = 5.0
-        # self.speed = 2.0
-        self.path = []
 
 
-        # If inside container: ip="host.docker.internal", port=41451
-        # self._client.confirmConnection()
-        # self.client.enableApiControl(True)
-        # self.client.takeoffAsync()
-        # self.client.armDisarm(True)
-
-    def move_along_path_pos(self):
-        path = [airsim.Vector3r(x, -y, -z) for (x, y, z) in self.path]
-        # print(f"air_path={path}")
+    def move_along_path(self, path):
+        path = [airsim.Vector3r(x, -y, -z) for (x, y, z) in path]
         self.client.moveOnPathAsync(
             path=path,
-            velocity=self.speed,
+            velocity=cfg.speed,
             timeout_sec=10,
             drivetrain=airsim.DrivetrainType.ForwardOnly,
             yaw_mode=airsim.YawMode(is_rate=False, yaw_or_rate=0),
@@ -547,7 +534,11 @@ class DroneController:
 
 if __name__ == '__main__':
     try:
-        print(f"using rgb: {cfg.use_rgb_imaging}")
+        cfg.parse_arguments()
+
+        print(f"{cfg.get_configs()}")
+        
+        # print(f"using rgb: {cfg.use_rgb_imaging}")
         precompile()
 
         node = MapperNavNode()
