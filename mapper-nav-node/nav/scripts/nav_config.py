@@ -74,6 +74,8 @@ path_heigth_neg_real_tol = -3
 use_real_heigth_tolerances = True
 # use_real_heigth_tolerances = False
 
+unf_plan_limit = 4
+
 
 ################
 #  publishing  #

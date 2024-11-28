@@ -93,12 +93,11 @@ def get_neighbors(node, grid, height_restr):
 
 # A* algorithm for 3D space
 def a_star_3d(grid, start, goal, height_restr):
-    print(f"height_restr={height_restr}")
     for pt in [start, goal]:
         for pd, gd in zip(pt, grid.shape):
             if pd < 1 or pd > gd - 2:
                 print(f"{pt} is out of range {grid.shape}")
-                return []
+                return [], True
 
     # Priority queue for the open list (min-heap)
     open_list = []
@@ -126,7 +125,7 @@ def a_star_3d(grid, start, goal, height_restr):
             while current_node:
                 path.append(current_node)
                 current_node = came_from[current_node]
-            return path[::-1]  # Returnreversed path (from start to goal)
+            return path[::-1], iters > cfg.max_a_star_iters   # Returnreversed path (from start to goal)
         
         # Explore neighbors
         for neighbor in get_neighbors(current_node, grid, height_restr):
@@ -142,4 +141,4 @@ def a_star_3d(grid, start, goal, height_restr):
                 heapq.heappush(open_list, (f_cost[neighbor], neighbor))
     
     # Return empty list if no path is found
-    return []
+    return [], True
