@@ -7,8 +7,6 @@ import random
 from a_star import a_star_3d
 from utils import bresenham3d_raycast, clamp, quaternion_from_two_vectors
 import nav_config as cfg
-# from math import tan, pi
-# from d_star import DStar
 from drrt import DRRT
 
 from numba import njit
@@ -139,6 +137,7 @@ class VoxArray:
         self.plan_path = []
         self.plan_qtrs = []
         self.plan_unf = False
+        self.replan_cnt = 0
         
         self.has_init_off = False
         self.init_off = np.array([0.,0.,0.])
@@ -147,9 +146,22 @@ class VoxArray:
         self.start:tuple = tuple(self.cntr)
         self.updated_start_or_goal:bool = False
 
-        # travel_off = np.array(cfg.travel_off)
-        # self.goal:tuple = tuple((np.array(self.start) + travel_off).astype(int))
-        self.goal:tuple = tuple(self.cntr)
+        # goal_off = np.array(cfg.goal_off)
+        # self.goal:tuple = tuple((np.array(self.start) + goal_off).astype(int))
+        if len(cfg.goal_off) == 3:
+            self.goal:tuple = ( \
+                    int(round(self.cntr[0] + cfg.goal_off[0] / cfg.map_resolution)), \
+                    int(round(self.cntr[1] + cfg.goal_off[1] / cfg.map_resolution)), \
+                    int(round(self.cntr[2] + cfg.goal_off[2] / cfg.map_resolution)))
+            self.updated_start_or_goal = True
+        elif len(cfg.goal_off_vox) == 3:
+            self.goal:tuple = ( \
+                    self.cntr[0] + cfg.goal_off_vox[0], \
+                    self.cntr[1] + cfg.goal_off_vox[1], \
+                    self.cntr[2] + cfg.goal_off_vox[2])
+            self.updated_start_or_goal = True
+        else:
+            self.goal:tuple = tuple(self.cntr)
 
         self.pos:tuple = self.start
         self.pos_acc:tuple = self.start
@@ -379,6 +391,7 @@ class VoxArray:
                    self.cntr[2] + cfg.path_heigth_pos_vox_tol)
 
 
+            self.replan_cnt += 1
             self.plan_path, self.plan_unf = a_star_3d(self.vox, self.pos, self.goal, tolerances)
             self.fat_path = make_fat_path(self.plan_path)
             self.updated_start_or_goal = False
@@ -391,10 +404,10 @@ class VoxArray:
                 self.plan_qtrs = self.plan_qtrs[1:]
         # print(f"found plan qtrs={self.plan_qtrs}")
         
-        
 
     def plan_drrt(self, ch_pts):
         print(f"pos={self.pos}")
+        self.replan_cnt += 1
         self.pf.update_obstacles(ch_pts)
         self.pf.update_start(self.pos)
         self.pf.plan()
@@ -404,7 +417,6 @@ class VoxArray:
         self.__set_plan_qtrs()
         # print(f"path={self.plan_path}")
         print(f"path.len={len(self.plan_path)}")
-
 
         
     def add_pcd(self, pcd, cam_pos):
