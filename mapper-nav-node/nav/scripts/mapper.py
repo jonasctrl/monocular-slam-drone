@@ -63,9 +63,6 @@ def add_pcd_njit(vox, pcd, cam_pt, resolution, off):
     
     for point in unique_pcd:
         (x, y, z) = point
-        if vox[x, y, z] < cfg.occup_thr:
-            changed_pts.append((x, y, z, -1))
-        vox[x, y, z] = clamp(vox[x, y, z] + cfg.ray_hit_incr, cfg.occup_min, cfg.occup_max)
         cols = bresenham3d_raycast(cam_pt, point, vox)
         for cur in cols:
             (x, y, z, v) = cur
@@ -76,10 +73,16 @@ def add_pcd_njit(vox, pcd, cam_pt, resolution, off):
                 incr = cfg.ray_miss_incr
                 ch_val = clamp(v + incr, cfg.occup_min, cfg.occup_max)
                 vox[x, y, z] = ch_val
-                if v < cfg.occup_thr and ch_val >= cfg.occup_thr:
-                    changed_pts.append((x, y, z, -1))
-                elif v >= cfg.occup_thr and ch_val < cfg.occup_thr:
+                if v >= cfg.occup_thr and ch_val < cfg.occup_thr:
                     changed_pts.append((x, y, z, 0))
+
+    for point in unique_pcd:
+        (x, y, z) = point
+        v = vox[x, y, z]
+        ch_val = clamp(v + cfg.ray_hit_incr, cfg.occup_min, cfg.occup_max)
+        vox[x, y, z] = ch_val
+        if v < cfg.occup_thr and ch_val >= cfg.occup_thr:
+            changed_pts.append((x, y, z, -1))
 
     return changed_pts
 
