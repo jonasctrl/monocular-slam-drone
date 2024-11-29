@@ -25,7 +25,7 @@ occup_thr = 8
 ray_miss_incr = -1
 
 # Constant by which voxel occupancy value is increased if obstacle is detected in it
-ray_hit_incr = 7
+ray_hit_incr = 8
 
 # Mapping resolution, i.e. amount of simulation distance units (m, ft, cm, etc.) for each voxel
 map_resolution = 1.5
