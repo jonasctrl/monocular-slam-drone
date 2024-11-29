@@ -66,6 +66,9 @@ use_a_star = True
 # Maximum allowed A* iterations
 max_a_star_iters = 500
 
+# How much to allowed A* iterations if path finding do not get finished
+unf_max_iters_incr = 200
+
 # How many voxels viecle is allowed to drift from path without triggering replanning
 path_drift_tolerance = 3.0
 
@@ -79,11 +82,17 @@ path_heigth_pos_real_tol = 3
 # Lower path finding heigth restriction as offset in simulation distance units from starting height
 path_heigth_neg_real_tol = -3
 
+# How much to decrease lower path finding heigth restriction value (in voxels)
+unf_neg_tol_incr = 0
+
+# How much to increase higher path finding heigth restriction value (in voxels)
+unf_pos_tol_incr = 0
+
 # Use simulation unit based heigth restrictions instead of voxel based ones
 use_real_heigth_tolerances = True
 
 # Minimum amount of "unfinished" plan steps allowed before triggering replanning
-unf_plan_limit = 4
+unf_plan_limit = 5
 
 ################
 #  publishing  #
@@ -152,7 +161,8 @@ def parse_arguments():
     global path_heigth_neg_vox_tol, path_heigth_pos_real_tol, path_heigth_neg_real_tol
     global use_real_heigth_tolerances, unf_plan_limit, publish_occup_intensities
     global publish_occup, publish_empty, publish_pose, publish_path, publish_plan
-    global reset_sim, camera_name, max_sim_freq, speed, logfile
+    global reset_sim, camera_name, max_sim_freq, speed, logfile, exit_on_goal
+    global unf_max_iters_incr, unf_neg_tol_incr, unf_pos_tol_incr
 
     parser = argparse.ArgumentParser(description="Simulation configuration options.")
 
@@ -181,11 +191,15 @@ def parse_arguments():
     parser.add_argument('--use_drrt', action='store_true', default=use_drrt, help="Use DRRT algorithm.")
     parser.add_argument('--use_a_star', action='store_true', default=use_a_star, help="Use A* algorithm.")
     parser.add_argument('--max_a_star_iters', type=int, default=max_a_star_iters, help="Maximum A* iterations.")
+    parser.add_argument('--unf_max_iters_incr', type=int, default=unf_max_iters_incr, help="How much to allowed A* iterations if path finding do not get finished.")
     parser.add_argument('--path_drift_tolerance', type=float, default=path_drift_tolerance, help="Path drift tolerance.")
     parser.add_argument('--path_heigth_pos_vox_tol', type=int, default=path_heigth_pos_vox_tol, help="Upper height restriction (voxels).")
     parser.add_argument('--path_heigth_neg_vox_tol', type=int, default=path_heigth_neg_vox_tol, help="Lower height restriction (voxels).")
     parser.add_argument('--path_heigth_pos_real_tol', type=float, default=path_heigth_pos_real_tol, help="Upper height restriction (real units).")
     parser.add_argument('--path_heigth_neg_real_tol', type=float, default=path_heigth_neg_real_tol, help="Lower height restriction (real units).")
+
+    parser.add_argument('--unf_neg_tol_incr', type=int, default=unf_neg_tol_incr, help="How much to decrease lower path finding heigth restriction value (in voxels).")
+    parser.add_argument('--unf_pos_tol_incr', type=int, default=unf_pos_tol_incr, help="How much to increase higher path finding heigth restriction value (in voxels).")
     parser.add_argument('--not_use_real_heigth_tolerances', action='store_false', default=use_real_heigth_tolerances, help="Use real unit height restrictions.")
     parser.add_argument('--unf_plan_limit', type=int, default=unf_plan_limit, help="Minimum unfinished steps to replan.")
 
