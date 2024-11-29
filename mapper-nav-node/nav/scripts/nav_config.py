@@ -52,8 +52,11 @@ dimg_max_depth = 50
 #  path finding  #
 ##################
 
-# Goal position offset from start position
-travel_off = (0, 0, 0) 
+# Goal position offset from start position in simulation units
+goal_off = ()
+
+# Goal position offset from start position in voxels
+goal_off_vox = ()
 
 # Use DRRT path finding algorithm instead of A*
 use_drrt = False
@@ -104,13 +107,15 @@ publish_path = True
 # Publish "viecle planned path" ROS message
 publish_plan = True
 
-
 ################
 #  simulation  #
 ################
 
 # Reset simulation on startup
 reset_sim = False
+
+# Exit if goal is reached
+exit_on_goal = False
 
 # Simulation camera name
 camera_name = "fc"
@@ -120,6 +125,16 @@ max_sim_freq= 5
 
 # Maximum speed of viecle in simulation
 speed = 5.0
+
+# Allowed distance error to goal in simulation distance units to to caount as 'reached'
+goal_err = 4
+
+#############
+#  logging  #
+#############
+
+# File for results logging
+logfile = None
 
 globals_dict = {
     key: value
@@ -132,12 +147,12 @@ def parse_arguments():
     global map_depth, map_width, map_heigth, occup_unkn, occup_min, occup_max
     global occup_thr, ray_miss_incr, ray_hit_incr, map_resolution
     global use_opencv_imaging, use_rgb_imaging, dimg_stride
-    global dimg_min_depth, dimg_max_depth, travel_off, use_drrt, use_a_star
+    global dimg_min_depth, dimg_max_depth, goal_off, goal_off_vox, use_drrt, use_a_star
     global max_a_star_iters, path_drift_tolerance, path_heigth_pos_vox_tol
     global path_heigth_neg_vox_tol, path_heigth_pos_real_tol, path_heigth_neg_real_tol
     global use_real_heigth_tolerances, unf_plan_limit, publish_occup_intensities
     global publish_occup, publish_empty, publish_pose, publish_path, publish_plan
-    global reset_sim, camera_name, max_sim_freq, speed
+    global reset_sim, camera_name, max_sim_freq, speed, logfile
 
     parser = argparse.ArgumentParser(description="Simulation configuration options.")
 
@@ -161,7 +176,8 @@ def parse_arguments():
     parser.add_argument('--dimg_max_depth', type=int, default=dimg_max_depth, help="Maximum depth.")
 
     # Pathfinding options
-    parser.add_argument('--travel_off', type=tuple, default=travel_off, help="Goal position offset.")
+    parser.add_argument('--goal_off', nargs='+', type=float, default=goal_off, help="Goal position offset in simulation units.")
+    parser.add_argument('--goal_off_vox', nargs='+', type=float, default=goal_off_vox, help="Goal position offset in voxels.")
     parser.add_argument('--use_drrt', action='store_true', default=use_drrt, help="Use DRRT algorithm.")
     parser.add_argument('--use_a_star', action='store_true', default=use_a_star, help="Use A* algorithm.")
     parser.add_argument('--max_a_star_iters', type=int, default=max_a_star_iters, help="Maximum A* iterations.")
@@ -183,9 +199,14 @@ def parse_arguments():
 
     # Simulation options
     parser.add_argument('--reset_sim', action='store_true', default=reset_sim, help="Reset simulation on startup.")
+    parser.add_argument('--exit_on_goal', action='store_true', default=exit_on_goal, help="Exit if goal is reached.")
     parser.add_argument('--camera_name', type=str, default=camera_name, help="Simulation camera name.")
     parser.add_argument('--max_sim_freq', type=int, default=max_sim_freq, help="Maximum simulation frequency.")
     parser.add_argument('--speed', type=float, default=speed, help="Maximum vehicle speed.")
+
+    # Logging
+    parser.add_argument('--logfile', type=str, default=logfile, help="File for results logging.")
+    parser.add_argument('--goal_err', type=int, default=goal_err, help="Allowed distance error to goal in simulation distance units to to caount as 'reached'.")
 
     # Parse arguments
     args = parser.parse_args()
