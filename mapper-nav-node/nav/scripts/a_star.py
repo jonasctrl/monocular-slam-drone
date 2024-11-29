@@ -4,6 +4,11 @@ from numba import njit
 
 import nav_config as cfg
 
+def_tol = (0,0)
+tol = (0,0)
+max_iters = cfg.max_a_star_iters
+
+
 # Heuristic: Euclidean distance between two points
 # @njit
 def heuristic(p1, p2):
@@ -92,7 +97,9 @@ def get_neighbors(node, grid, height_restr):
     return neighbors
 
 # A* algorithm for 3D space
-def a_star_3d(grid, start, goal, height_restr):
+def a_star_3d(grid, start, goal):
+    global max_iters, tol
+    
     for pt in [start, goal]:
         for pd, gd in zip(pt, grid.shape):
             if pd < 1 or pd > gd - 2:
@@ -119,16 +126,28 @@ def a_star_3d(grid, start, goal, height_restr):
         current_f_cost, current_node = heapq.heappop(open_list)
         
         # If the goal is reached, reconstruct the path
+        is_unf = iters > max_iters
+
         
-        if current_node == goal or iters > cfg.max_a_star_iters:
+        if current_node == goal or is_unf:
+            if is_unf:
+                # Increase maximum iteration count and allowed tolerances if
+                # path planning was cut short
+                max_iters += cfg.unf_max_iters_incr
+                tol = (tol[0] + cfg.unf_neg_tol_incr, tol[1] + cfg.unf_pos_tol_incr)
+            else:
+                max_iters = cfg.max_a_star_iters
+                tol = def_tol
+
+
             path = []
             while current_node:
                 path.append(current_node)
                 current_node = came_from[current_node]
-            return path[::-1], iters > cfg.max_a_star_iters   # Returnreversed path (from start to goal)
+            return path[::-1], is_unf   # Returnreversed path (from start to goal)
         
         # Explore neighbors
-        for neighbor in get_neighbors(current_node, grid, height_restr):
+        for neighbor in get_neighbors(current_node, grid, tol):
             tentative_g_cost = g_cost[current_node] + 1  # Cost from start to neighbor (assuming uniform grid)
 
             if neighbor not in g_cost or tentative_g_cost < g_cost[neighbor]:
@@ -142,3 +161,13 @@ def a_star_3d(grid, start, goal, height_restr):
     
     # Return empty list if no path is found
     return [], True
+
+
+def a_star_setup(tolerances):
+    global tol, def_tol
+    tol = tolerances
+    def_tol = tolerances
+
+
+
+

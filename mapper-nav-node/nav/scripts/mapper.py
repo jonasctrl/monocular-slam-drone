@@ -4,7 +4,7 @@ from scipy.spatial.transform import Rotation as R
 import time
 import random
 
-from a_star import a_star_3d
+from a_star import a_star_3d, a_star_setup
 from utils import bresenham3d_raycast, clamp, quaternion_from_two_vectors
 import nav_config as cfg
 from drrt import DRRT
@@ -107,7 +107,8 @@ def precompile():
         2.0,
         np.array((2,1,0)))
 
-    a_star_3d(vox, (1,1,2), (3,4,4), (1,3))
+    a_star_setup((1,3))
+    a_star_3d(vox, (1,1,2), (3,4,4))
 
     print(f"done")
 
@@ -172,6 +173,16 @@ class VoxArray:
 
         self.data = []
         self.data_idx = 0
+
+        if cfg.use_real_heigth_tolerances:
+           tolerances = \
+               (self.cntr[2] + int(round(cfg.path_heigth_neg_real_tol / cfg.map_resolution)),\
+               self.cntr[2] + int(round(cfg.path_heigth_pos_real_tol / cfg.map_resolution)))
+        else:
+           tolerances = (self.cntr[2] + cfg.path_heigth_neg_vox_tol,\
+               self.cntr[2] + cfg.path_heigth_pos_vox_tol)
+        
+        a_star_setup(tolerances=tolerances)
 
         # self.pf = DStar(x_start=int(self.pos[0]), y_start=int(self.pos[1]),
                         # x_goal=int(self.goal[0]), y_goal=int(self.goal[1]))
@@ -385,17 +396,9 @@ class VoxArray:
             self.walk_path()
         else:
             print(f"new plan {self.start} => {self.goal}")
-            if cfg.use_real_heigth_tolerances:
-               tolerances = \
-                   (self.cntr[2] + int(round(cfg.path_heigth_neg_real_tol / cfg.map_resolution)),\
-                   self.cntr[2] + int(round(cfg.path_heigth_pos_real_tol / cfg.map_resolution)))
-            else:
-               tolerances = (self.cntr[2] + cfg.path_heigth_neg_vox_tol,\
-                   self.cntr[2] + cfg.path_heigth_pos_vox_tol)
-
 
             self.replan_cnt += 1
-            self.plan_path, self.plan_unf = a_star_3d(self.vox, self.pos, self.goal, tolerances)
+            self.plan_path, self.plan_unf = a_star_3d(self.vox, self.pos, self.goal)
             self.fat_path = make_fat_path(self.plan_path)
             self.updated_start_or_goal = False
             print(f"found path={self.plan_path}")
