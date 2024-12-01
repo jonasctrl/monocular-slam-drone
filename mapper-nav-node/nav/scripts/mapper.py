@@ -142,6 +142,9 @@ class VoxArray:
         self.plan_qtrs = []
         self.plan_unf = False
         self.replan_cnt = 0
+        self.no_path_cnt = 0
+        self.coll_cnt = 0
+        self.last_path_idx = -1
         
         self.has_init_off = False
         self.init_off = np.array([0.,0.,0.])
@@ -389,7 +392,13 @@ class VoxArray:
         if min_idx > 0:
             self.plan_path = self.plan_path[min_idx + 1:]
             self.plan_qtrs = self.plan_qtrs[min_idx + 1:]
+
+        if self.last_path_idx != min_idx:
+            self.no_path_cnt = 0
+        else:
+            self.no_path_cnt += 1
         
+        self.last_path_idx = min_idx
 
     def plan_a_star(self, ch_pts):
         if not self.do_need_new_plan(ch_pts):
@@ -406,6 +415,10 @@ class VoxArray:
 
             if len(self.plan_path) > 0:
                 self.plan_path = self.plan_path[1:]
+                self.no_path_cnt = 0
+            else:
+                self.no_path_cnt += 1
+
             if len(self.plan_qtrs) > 0:
                 self.plan_qtrs = self.plan_qtrs[1:]
         # print(f"found plan qtrs={self.plan_qtrs}")

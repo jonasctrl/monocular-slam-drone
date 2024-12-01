@@ -130,13 +130,10 @@ exit_on_goal = False
 camera_name = "fc"
 
 # Maximum frequency of simulation
-max_sim_freq= 5
+max_sim_freq= 20
 
 # Maximum speed of viecle in simulation
 speed = 5.0
-
-# Allowed distance error to goal in simulation distance units to to caount as 'reached'
-goal_err = 4
 
 #############
 #  logging  #
@@ -144,6 +141,18 @@ goal_err = 4
 
 # File for results logging
 logfile = None
+
+# Number of failures to find path before quiting simulation
+no_path_watchdog_cnt = 50
+
+# Number of collision iteration before quiting simulation
+collision_watchdog_cnt = 50
+
+# Number of allowed iterations in simulation
+max_steps = 100000
+
+# Allowed distance error to goal in simulation distance units to to caount as 'reached'
+goal_err = 5
 
 globals_dict = {
     key: value
@@ -162,7 +171,8 @@ def parse_arguments():
     global use_real_heigth_tolerances, unf_plan_limit, publish_occup_intensities
     global publish_occup, publish_empty, publish_pose, publish_path, publish_plan
     global reset_sim, camera_name, max_sim_freq, speed, logfile, exit_on_goal
-    global unf_max_iters_incr, unf_neg_tol_incr, unf_pos_tol_incr
+    global unf_max_iters_incr, unf_neg_tol_incr, unf_pos_tol_incr, no_path_watchdog_cnt
+    global collision_watchdog_cnt, goal_err, max_steps
 
     parser = argparse.ArgumentParser(description="Simulation configuration options.")
 
@@ -221,6 +231,12 @@ def parse_arguments():
     # Logging
     parser.add_argument('--logfile', type=str, default=logfile, help="File for results logging.")
     parser.add_argument('--goal_err', type=int, default=goal_err, help="Allowed distance error to goal in simulation distance units to to caount as 'reached'.")
+
+    parser.add_argument('--collision_watchdog_cnt', type=int, default=collision_watchdog_cnt, help="Number of collision iteration before quiting simulation.")
+
+    parser.add_argument('--no_path_watchdog_cnt', type=int, default=no_path_watchdog_cnt, help="Number of failures to find path before quiting simulation.")
+    
+    parser.add_argument('--max_steps', type=int, default=max_steps, help="Number of allowed iterations in simulation.")
 
     # Parse arguments
     args = parser.parse_args()

@@ -160,7 +160,9 @@ class MapperNavNode:
         self.client.confirmConnection()
         if cfg.reset_sim:
             print(f"Reseting simulation ... ", end="")
+            time.sleep(1)
             self.client.reset()
+            time.sleep(1)
             self.client.enableApiControl(True)
             self.client.armDisarm(True)
             self.client.takeoffAsync().join()
@@ -472,6 +474,12 @@ class MapperNavNode:
         self.logger.add_key_val("has_col", has_col)
         self.logger.add_key_val("col_obj_id", col_obj_id)
 
+        if has_col:
+            print(f"Vehicle is colliding")
+            self.vmap.coll_cnt += 1
+        else:
+            self.vmap.coll_cnt = 0
+
 
         self.logger.add_key_val("time_start", time.time())
         if cfg.use_rgb_imaging:
@@ -517,11 +525,12 @@ class MapperNavNode:
 
         self.logger.add_key_val("time_end", time.time())
         
-        self.logger.push_entry()
         
         goal_orig = self.vmap.point_from_map(self.vmap.goal)
         goal_err = np.linalg.norm(np.array(cur_pos) - np.array(goal_orig))
         if goal_err <= cfg.goal_err and (len(cfg.goal_off_vox) == 3 or len(cfg.goal_off) == 3):
+            self.logger.add_key_val("gloal_reached", True)
+            self.logger.push_entry()
             self.logger.export_logs()
             if cfg.exit_on_goal:
                 print(f"Goal was reached. Exiting ...")
@@ -530,6 +539,29 @@ class MapperNavNode:
                 # self.client.enableApiControl(False)
                 exit(0)
                 
+        self.logger.add_key_val("gloal_reached", False)
+        self.logger.push_entry()
+
+        if self.vmap.coll_cnt > cfg.collision_watchdog_cnt:
+            print(f"Collision counter exdeeded. Exiting ...")
+            self.logger.export_logs()
+            self.client.landAsync().join()
+            self.client.armDisarm(False)
+            exit(0)
+                
+        if self.vmap.no_path_cnt > cfg.no_path_watchdog_cnt:
+            print(f"No path counter exdeeded. Exiting ...")
+            self.logger.export_logs()
+            self.client.landAsync().join()
+            self.client.armDisarm(False)
+            exit(0)
+                
+        if self.sequence > cfg.max_steps:
+            print(f"Maximum iteration counter exdeeded. Exiting ...")
+            self.logger.export_logs()
+            self.client.landAsync().join()
+            self.client.armDisarm(False)
+            exit(0)
         
         if len(path) > 1:
             self.ctl.move_along_path(path)
