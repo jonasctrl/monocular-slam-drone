@@ -31,7 +31,7 @@ class DroneController:
 
         self._active_commands = {command: False for command in self._key_command_mapping.values()}
 
-        self._client = airsim.MultirotorClient(ip="host.docker.internal", port=41451)
+        self._client = airsim.MultirotorClient()
         self._client.confirmConnection()
         self._client.enableApiControl(True)
         self._client.takeoffAsync()
