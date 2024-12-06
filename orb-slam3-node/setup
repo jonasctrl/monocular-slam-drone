@@ -1,3 +1,0 @@
-1. Make sure that EuRoC.yaml matches the camera calibration parameters of the camera you are using.
-2. Camera with and height should match. FOV. FPS.
-3. Other camera parameters and IMU can be calibrated with airsim-node\utils\drone_camera_calibration.py

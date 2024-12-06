@@ -1,3 +1,0 @@
-<launch>
-    <node pkg="airsim_package" type="airsim_IMU.py" name="airsim_IMU" output="screen" launch-prefix="python3" />
-</launch>
