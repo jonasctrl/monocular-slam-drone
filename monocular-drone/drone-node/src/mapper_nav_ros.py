@@ -5,6 +5,7 @@ import struct
 import time
 import numpy as np
 import pyfiglet
+from termcolor import colored
 
 import rospy
 from sensor_msgs.msg import PointCloud2, PointField
@@ -468,18 +469,21 @@ class DroneController:
             adaptive_lookahead=0
         )
 
-def display_banner():
+def display_banner(version):    
     banner = pyfiglet.figlet_format("MONOCULAR DRONE", font="slant")
+    banner = colored(banner, "cyan")
     print(banner)
+    print(colored("Drone ROS Node v" + version, "yellow"))
 
 if __name__ == '__main__':
+    version = "1.0.0"
     node = None
     try:
         cfg.parse_arguments()
 
-        display_banner()
+        display_banner(version)
         print(f"{cfg.get_configs()}")
-        
+
         precompile()
 
         node = MapperNavNode()
@@ -491,8 +495,5 @@ if __name__ == '__main__':
                 node.logger.export_logs()
             if node.client is not None:
                 node.client.landAsync().join()
-                # NOTE: Disarm and disable API control
-                # node.client.armDisarm(False)
-                # node.client.enableApiControl(False)
     except rospy.ROSInterruptException:
         pass
