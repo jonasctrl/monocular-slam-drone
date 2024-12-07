@@ -75,7 +75,7 @@ class MonoDepth2DepthEstimatorModule:
         except Exception:
             pass 
 
-    @torch.inference_mode()  # More efficient than @torch.no_grad()
+    @torch.inference_mode() 
     def generate_depth_map(self, frame_rgb: np.ndarray) -> np.ndarray:
         """Generate depth map with optimized processing."""
         original_height, original_width = frame_rgb.shape[:2]
