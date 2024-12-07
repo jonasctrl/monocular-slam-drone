@@ -16,7 +16,6 @@ from std_msgs.msg import Header
 from monodepth import MonoDepth2DepthEstimatorModule
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 
 import airsim
@@ -27,248 +26,6 @@ import nav_config as cfg
 
 import warnings
 warnings.filterwarnings("ignore")
-
-plt.ion()
-
-
-class CV2_ORB:
-    def __init__(self):
-        self.orb  = cv2.ORB_create()
-        self.last_img = None
-        self.last_kp = None
-        self.last_des  = None
-        # self.last_pts = None
-        self.last_pos = None
-        self.last_P = None
-
-        self.img_idx = 0
-        
-        self.FLANN_INDEX_LSH = 6
-        self.index_params= dict(algorithm = self.FLANN_INDEX_LSH,
-                           table_number = 6, # 12
-                           key_size = 12,     # 20
-                           multi_probe_level = 1) #2
-        self.search_params = dict(checks=50)
-
-
-        # Compute fx and fy from FOV
-        hfov_rad = 90 * math.pi / 180.0
-        fx = (255 / 2.0) / math.tan(hfov_rad / 2.0)
-        fy = fx
-        # Compute principal point coordinates
-        cx = 255 / 2.0
-        cy = 144 / 2.0
-
-        self.K = np.array([[fx, 0, cx],
-                          [0, fy, cy],
-                          [0, 0, 1]])
-
-    def __quaternion_to_rotation_matrix(self, q):
-        return R.from_quat(q).as_matrix()
-
-    def __triangulate_points(self, proj_matrix1, proj_matrix2, points1, points2):
-        try:
-            points_homogeneous = cv2.triangulatePoints(proj_matrix1, proj_matrix2, points1.T, points2.T)
-        except:
-            print(f"ERROR")
-            breakpoint()
-        points_3d = points_homogeneous[:3] / points_homogeneous[3]  # Convert to non-homogeneous
-        return points_3d.T
-
-    def process_gray(self, img, pos, qtr):
-        pcd = []
-
-        if self.last_img is not None:
-            dist = np.linalg.norm(np.array(self.last_pos) - np.array(pos))
-            if dist < 0.2:
-                print(f"Not enough movement {round(dist, 3)}")
-                return pcd
-
-        kp, des = self.orb.detectAndCompute(img, None)
-
-        rot = self.__quaternion_to_rotation_matrix(qtr)
-        P = self.K @ np.hstack((rot, pos.reshape(-1, 1)))  # Projection matrix
-
-        if self.last_img is not None:
-            
-            
-            flann = cv2.FlannBasedMatcher(self.index_params,self.search_params)
- 
-            try:
-                all_matches = flann.knnMatch(self.last_des,des,k=2)
-            except:
-                print(f"ERROR")
-                breakpoint()
-            # ratio test as per Lowe's paper
-            matches = []
-            for match in all_matches:
-                if len(match) < 2:
-                    continue
-                (m, n) = match
-                if m.distance < 0.7 * n.distance:  # Lowe's ratio test
-                    matches.append(m)
-
-            
-            
-            # bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-            # matches = bf.match(self.last_des, des)
-            # matches = sorted(matches, key=lambda x: x.distance)
-
-            last_pts = np.float32([self.last_kp[m.queryIdx].pt for m in matches])
-            pts = np.float32([kp[m.trainIdx].pt for m in matches])
-
-
-            if len(pts) > 0 and len(last_pts) > 0:
-                pcd = self.__triangulate_points(self.last_P, P, last_pts, pts)
-                pcd = [[z, -x, -y] for (x, y, z) in pcd]
-
-            print(f"matches.len={len(pcd)}")
-            
-            # for i, depth in enumerate(points_3d[:10]):  # Show first 10 depths as an example
-                # print(f"Keypoint {i + 1}: Depth = {depth[2]:.2f} units")
-
-            img_matches = cv2.drawMatches(self.last_img, self.last_kp, img, kp, matches[:50], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-
-# Display the matches
-            cv2.imwrite(f"./img_nh/matches_{self.img_idx:04d}.jpg", img_matches)
-            self.img_idx += 1
-            # plt.figure(figsize=(12, 6))
-            # plt.title('ORB Feature Matching')
-            # plt.imshow(img_matches)
-            # plt.axis('off')
-            # plt.pause(0.05)
-            # plt.show()
-            # breakpoint()
-
-        self.last_img = img
-        self.last_kp = kp
-        self.last_des = des
-        self.last_pos = pos
-        self.last_P = P
-
-
-        return pcd
-        
-
-        
-class CV2_ORB:
-    def __init__(self):
-        self.orb  = cv2.ORB_create()
-        self.last_img = None
-        self.last_kp = None
-        self.last_des  = None
-        # self.last_pts = None
-        self.last_pos = None
-        self.last_P = None
-
-        self.img_idx = 0
-        
-        self.FLANN_INDEX_LSH = 6
-        self.index_params= dict(algorithm = self.FLANN_INDEX_LSH,
-                           table_number = 6, # 12
-                           key_size = 12,     # 20
-                           multi_probe_level = 1) #2
-        self.search_params = dict(checks=50)
-
-
-        # Compute fx and fy from FOV
-        hfov_rad = 90 * math.pi / 180.0
-        fx = (255 / 2.0) / math.tan(hfov_rad / 2.0)
-        fy = fx
-        # Compute principal point coordinates
-        cx = 255 / 2.0
-        cy = 144 / 2.0
-
-        self.K = np.array([[fx, 0, cx],
-                          [0, fy, cy],
-                          [0, 0, 1]])
-
-    def __quaternion_to_rotation_matrix(self, q):
-        return R.from_quat(q).as_matrix()
-
-    def __triangulate_points(self, proj_matrix1, proj_matrix2, points1, points2):
-        try:
-            points_homogeneous = cv2.triangulatePoints(proj_matrix1, proj_matrix2, points1.T, points2.T)
-        except:
-            print(f"ERROR")
-            breakpoint()
-        points_3d = points_homogeneous[:3] / points_homogeneous[3]  # Convert to non-homogeneous
-        return points_3d.T
-
-    def process_gray(self, img, pos, qtr):
-        pcd = []
-
-        if self.last_img is not None:
-            dist = np.linalg.norm(np.array(self.last_pos) - np.array(pos))
-            if dist < 0.2:
-                print(f"Not enough movement {round(dist, 3)}")
-                return pcd
-
-        kp, des = self.orb.detectAndCompute(img, None)
-
-        rot = self.__quaternion_to_rotation_matrix(qtr)
-        P = self.K @ np.hstack((rot, pos.reshape(-1, 1)))  # Projection matrix
-
-        if self.last_img is not None:
-            
-            
-            flann = cv2.FlannBasedMatcher(self.index_params,self.search_params)
- 
-            try:
-                all_matches = flann.knnMatch(self.last_des,des,k=2)
-            except:
-                print(f"ERROR")
-                breakpoint()
-            # ratio test as per Lowe's paper
-            matches = []
-            for match in all_matches:
-                if len(match) < 2:
-                    continue
-                (m, n) = match
-                if m.distance < 0.7 * n.distance:  # Lowe's ratio test
-                    matches.append(m)
-
-            
-            
-            # bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-            # matches = bf.match(self.last_des, des)
-            # matches = sorted(matches, key=lambda x: x.distance)
-
-            last_pts = np.float32([self.last_kp[m.queryIdx].pt for m in matches])
-            pts = np.float32([kp[m.trainIdx].pt for m in matches])
-
-
-            if len(pts) > 0 and len(last_pts) > 0:
-                pcd = self.__triangulate_points(self.last_P, P, last_pts, pts)
-                pcd = [[z, -x, -y] for (x, y, z) in pcd]
-
-            print(f"matches.len={len(pcd)}")
-            
-            # for i, depth in enumerate(points_3d[:10]):  # Show first 10 depths as an example
-                # print(f"Keypoint {i + 1}: Depth = {depth[2]:.2f} units")
-
-            img_matches = cv2.drawMatches(self.last_img, self.last_kp, img, kp, matches[:50], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-
-# Display the matches
-            cv2.imwrite(f"./img_nh/matches_{self.img_idx:04d}.jpg", img_matches)
-            self.img_idx += 1
-            # plt.figure(figsize=(12, 6))
-            # plt.title('ORB Feature Matching')
-            # plt.imshow(img_matches)
-            # plt.axis('off')
-            # plt.pause(0.05)
-            # plt.show()
-            # breakpoint()
-
-        self.last_img = img
-        self.last_kp = kp
-        self.last_des = des
-        self.last_pos = pos
-        self.last_P = P
-
-
-        return pcd
-        
 
 class MapperNavNode:
     def __init__(self):
@@ -283,8 +40,10 @@ class MapperNavNode:
 
         print(f"Reseting simulation ... ", end="")
         time.sleep(1)
+        
         self.client.reset()
         time.sleep(1)
+        
         self.client.enableApiControl(True)
         self.client.armDisarm(True)
         self.client.takeoffAsync().join()
@@ -319,7 +78,6 @@ class MapperNavNode:
         path_msg.header.frame_id = "map"
         path_msg.header.stamp = rospy.Time.now()
 
-        # print(f"cam_poses={self.vmap.cam_poses}")
         for pt, qtr in zip(self.vmap.cam_path_acc, self.vmap.cam_qtrs):
             (tx, ty, tz) = pt
             (qx, qy, qz, qw) = qtr
@@ -371,16 +129,12 @@ class MapperNavNode:
         if orig:
             self.plan_path_pub.publish(path_msg)
         else:
-            # print(f"path_msg={path_msg}")
             self.plan_map_path_pub.publish(path_msg)
 
     def publish_map_pose_msg(self):
         (pt, qtr) = self.vmap.get_pose(orig_coord=False)
         (tx, ty, tz) = pt
         (qx, qy, qz, qw) = qtr
-
-        # print(f"cur\t qtr={qtr}")
-        # print(f"lpt\t qtr={self.vmap.cam_qtrs[-1]}")
 
         pose_stamped = PoseStamped()
         pose_stamped.header.frame_id = "map"
@@ -402,7 +156,7 @@ class MapperNavNode:
         (x, y, z) = self.vmap.get_start(orig_coord=False)
         point_msg = PointStamped()
         point_msg.header.stamp = rospy.Time.now()
-        point_msg.header.frame_id = "map"  # Adjust to your frame of reference
+        point_msg.header.frame_id = "map"  
         point_msg.point = Point(x, y, z)
         self.start_pub.publish(point_msg)
 
@@ -410,7 +164,7 @@ class MapperNavNode:
         (x, y, z) = self.vmap.get_goal(orig_coord=False)
         point_msg = PointStamped()
         point_msg.header.stamp = rospy.Time.now()
-        point_msg.header.frame_id = "map"  # Adjust to your frame of reference
+        point_msg.header.frame_id = "map" 
         point_msg.point = Point(x, y, z)
         self.goal_pub.publish(point_msg)
 
@@ -441,7 +195,8 @@ class MapperNavNode:
                 width=len(points),
                 fields=fields,
                 is_bigendian=False,
-                point_step=16,  # 4 fields * 4 bytes/field
+                # 4 fields * 4 bytes/field
+                point_step=16,  
                 row_step=16 * len(points),
                 data=data,
                 is_dense=True
@@ -466,7 +221,6 @@ class MapperNavNode:
 
     def goal_callback(self, msg):
         position = msg.pose.position
-        # pos = tuple(np.array([position.x, position.y, position.z]).astype(int))
         pos = tuple(np.array([position.x, position.y, self.vmap.cntr[2]]).astype(int))
         self.vmap.set_goal(pos, update_start=True)
 
@@ -490,11 +244,8 @@ class MapperNavNode:
     
     def estimate_depth(self):
         img_rgb = self.get_rgb_img()
-
-        # depth_map = self.depth_estimator_module.generate_depth_map(img_rgb) - 70
         depth_map = self.depth_estimator_module.generate_depth_map(img_rgb)
 
-        # breakpoint()
         return depth_map
         
     
@@ -502,20 +253,13 @@ class MapperNavNode:
         response = self.client.simGetImages(
             [airsim.ImageRequest(cfg.camera_name, airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=False)])[0]
 
-        # if response.width == 0:
-            # rospy.logwarn("Failed to get valid image from AirSim camera")
-            # return None
-
         depth_map= np.array(response.image_data_float, dtype=np.float32).reshape(response.height, response.width)
         return depth_map
         
 
     def depth_img_to_pcd(self, dimg, fov):
-        (image_height, image_width) = dimg.shape
-        
         factor = 1.0
-        #if cfg.use_rgb_imaging:
-        #    factor = 2.5
+        (image_height, image_width) = dimg.shape
 
         # Compute fx and fy from FOV
         hfov_rad = fov * math.pi / 180.0
@@ -651,7 +395,6 @@ class MapperNavNode:
                 print(f"Goal was reached. Exiting ...")
                 self.client.landAsync().join()
                 self.client.armDisarm(False)
-                # self.client.enableApiControl(False)
                 exit(0)
                 
         self.logger.add_key_val("gloal_reached", False)

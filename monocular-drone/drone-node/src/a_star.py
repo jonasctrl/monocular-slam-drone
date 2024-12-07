@@ -26,38 +26,6 @@ def is_inside(pt, bounds):
             0 <= pt[2] < bounds[2]-1
 
 @njit
-def skip_dangerous_blocks1(cur, pt, diff, grid):
-    (new_x, new_y, new_z) = pt
-    (x, y, z) = cur
-    (dx, dy, dz) = diff
-
-    diag_num = abs(dx) + abs(dy) + abs(dz)
-    if diag_num == 3:
-        if abs(dx) + abs(dy) == 2:
-            if not v_empty(grid[x, y, new_z]) or \
-                not v_empty(grid[new_x, y, z]) or \
-                not v_empty(grid[x, y, new_z]) or \
-                not v_empty(grid[x, new_y, new_z]) or \
-                not v_empty(grid[new_x, y, new_z]) or \
-                not v_empty(grid[new_x, new_y, z]):
-                return True
-    elif diag_num == 2:
-        if abs(dx) + abs(dy) == 2:
-            if not v_empty(grid[new_x, y, new_z]) or \
-                    not v_empty(grid[x, new_y, new_z]):
-                return True
-        elif abs(dy) + abs(dz) == 2:
-            if not v_empty(grid[new_x, y, new_z]) or \
-                    not v_empty(grid[new_x, new_y, z]):
-                return True
-        else:
-            if not v_empty(grid[x, new_y, new_z]) or \
-                    not v_empty(grid[new_x, new_y, z]):
-                return True
-
-    return False
-
-@njit
 def skip_dangerous_blocks2(pt, grid):
     for dx in [-1, 0, 1]:
         for dy in [-1, 0, 1]:
@@ -72,6 +40,7 @@ def skip_dangerous_blocks2(pt, grid):
 def get_neighbors(node, grid, height_restr):
     neighbors = []
     x, y, z = node
+    
     # Check all possible directions in a 3D grid (26 possible neighbors)
     for dx in [-1, 0, 1]:
         for dy in [-1, 0, 1]:
@@ -85,14 +54,10 @@ def get_neighbors(node, grid, height_restr):
                     continue  # Skip too low or too high voxels
 
                 if is_inside(new_pt, grid.shape):
-                    # if skip_dangerous_blocks1(node, new_pt, (dx, dy, dz), grid):
-                        # continue
-
                     if skip_dangerous_blocks2(new_pt, grid):
                         continue
 
                     if v_empty(grid[new_x, new_y, new_z]):
-                    # if cfg.occup_unkn == v or cfg.occup_min <= v < cfg.occup_thr:
                         neighbors.append((new_x, new_y, new_z))
     return neighbors
 
@@ -146,9 +111,8 @@ def a_star_3d(grid, start, goal):
                 current_node = came_from[current_node]
             return path[::-1], is_unf   # Returnreversed path (from start to goal)
         
-        # Explore neighbors
         for neighbor in get_neighbors(current_node, grid, tol):
-            tentative_g_cost = g_cost[current_node] + 1  # Cost from start to neighbor (assuming uniform grid)
+            tentative_g_cost = g_cost[current_node] + 1 
 
             if neighbor not in g_cost or tentative_g_cost < g_cost[neighbor]:
                 # Update the cost and path
@@ -159,7 +123,6 @@ def a_star_3d(grid, start, goal):
                 # Add the neighbor to the open list
                 heapq.heappush(open_list, (f_cost[neighbor], neighbor))
     
-    # Return empty list if no path is found
     return [], True
 
 
