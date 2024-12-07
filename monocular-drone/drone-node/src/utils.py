@@ -109,9 +109,8 @@ def depth_img_to_pcd(img, skip, factor, cam_params=None, fov=None, max_depth=flo
 
     for v in range(1, height, skip):
         for u in range(1, width, skip):
-            z = img[v, u] / factor  # Depth value (in meters or millimeters)
-            # if z == 0:  # Skip pixels with no depth
-            if z == 0 or z > max_depth:  # Skip pixels with no depth
+            z = img[v, u] / factor  
+            if z == 0 or z > max_depth: 
                 continue
 
             # Convert (u, v, z) to (X, Y, Z)

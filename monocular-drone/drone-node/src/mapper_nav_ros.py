@@ -322,7 +322,6 @@ class MapperNavNode:
 
 
     def step(self):
-
         t0 = time.time()
         self.logger.new_entry()
         self.logger.add_key_val("idx", self.sequence)

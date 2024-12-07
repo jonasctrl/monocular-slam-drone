@@ -293,8 +293,7 @@ class VoxArray:
         if cfg.use_a_star:
             self.plan_a_star(ch_pts)
         else:
-            print(f"planning method not implemented")
-            pass
+            raise Exception("'planning method not set")
         
     def __is_not_on_path_soft(self, tolerance:float) -> bool:
         if len(self.plan_path) == 0:
