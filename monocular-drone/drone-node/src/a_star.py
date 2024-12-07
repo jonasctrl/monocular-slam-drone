@@ -9,11 +9,9 @@ tol = (0,0)
 max_iters = cfg.max_a_star_iters
 
 
-# Heuristic: Euclidean distance between two points
-# @njit
-def heuristic(p1, p2):
-    return np.linalg.norm(np.array(p1) - np.array(p2), ord=None)
-
+@njit(fastmath=True)
+def heuristic_manhattan(p1, p2):
+    return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1]) + abs(p1[2] - p2[2])
 
 @njit
 def v_empty(v):
@@ -25,7 +23,7 @@ def is_inside(pt, bounds):
             0 < pt[1] < bounds[1]-1 and \
             0 <= pt[2] < bounds[2]-1
 
-@njit
+@njit(fastmath=True)
 def skip_dangerous_blocks2(pt, grid):
     for dx in [-1, 0, 1]:
         for dy in [-1, 0, 1]:
@@ -33,7 +31,6 @@ def skip_dangerous_blocks2(pt, grid):
                 if not v_empty(grid[pt[0] + dx, pt[1] + dy, pt[2] + dz]):
                     return True
     return False
-
 
 # Get neighbors in a 3D grid
 @njit
@@ -82,7 +79,7 @@ def a_star_3d(grid, start, goal):
     came_from = {start: None}
     
     # Dictionary to store the total estimated cost (f = g + h)
-    f_cost = {start: heuristic(start, goal)}
+    f_cost = {start: heuristic_manhattan(start, goal)}
     
     iters = 0
     while open_list:
@@ -104,12 +101,13 @@ def a_star_3d(grid, start, goal):
                 max_iters = cfg.max_a_star_iters
                 tol = def_tol
 
-
             path = []
             while current_node:
                 path.append(current_node)
                 current_node = came_from[current_node]
-            return path[::-1], is_unf   # Returnreversed path (from start to goal)
+                
+            # Return reversed path (from start to goal)
+            return path[::-1], is_unf   
         
         for neighbor in get_neighbors(current_node, grid, tol):
             tentative_g_cost = g_cost[current_node] + 1 
@@ -117,14 +115,13 @@ def a_star_3d(grid, start, goal):
             if neighbor not in g_cost or tentative_g_cost < g_cost[neighbor]:
                 # Update the cost and path
                 g_cost[neighbor] = tentative_g_cost
-                f_cost[neighbor] = tentative_g_cost + heuristic(neighbor, goal)
+                f_cost[neighbor] = tentative_g_cost + heuristic_manhattan(neighbor, goal)
                 came_from[neighbor] = current_node
                 
                 # Add the neighbor to the open list
                 heapq.heappush(open_list, (f_cost[neighbor], neighbor))
     
     return [], True
-
 
 def a_star_setup(tolerances):
     global tol, def_tol
