@@ -30,6 +30,127 @@ warnings.filterwarnings("ignore")
 
 plt.ion()
 
+
+class CV2_ORB:
+    def __init__(self):
+        self.orb  = cv2.ORB_create()
+        self.last_img = None
+        self.last_kp = None
+        self.last_des  = None
+        # self.last_pts = None
+        self.last_pos = None
+        self.last_P = None
+
+        self.img_idx = 0
+        
+        self.FLANN_INDEX_LSH = 6
+        self.index_params= dict(algorithm = self.FLANN_INDEX_LSH,
+                           table_number = 6, # 12
+                           key_size = 12,     # 20
+                           multi_probe_level = 1) #2
+        self.search_params = dict(checks=50)
+
+
+        # Compute fx and fy from FOV
+        hfov_rad = 90 * math.pi / 180.0
+        fx = (255 / 2.0) / math.tan(hfov_rad / 2.0)
+        fy = fx
+        # Compute principal point coordinates
+        cx = 255 / 2.0
+        cy = 144 / 2.0
+
+        self.K = np.array([[fx, 0, cx],
+                          [0, fy, cy],
+                          [0, 0, 1]])
+
+    def __quaternion_to_rotation_matrix(self, q):
+        return R.from_quat(q).as_matrix()
+
+    def __triangulate_points(self, proj_matrix1, proj_matrix2, points1, points2):
+        try:
+            points_homogeneous = cv2.triangulatePoints(proj_matrix1, proj_matrix2, points1.T, points2.T)
+        except:
+            print(f"ERROR")
+            breakpoint()
+        points_3d = points_homogeneous[:3] / points_homogeneous[3]  # Convert to non-homogeneous
+        return points_3d.T
+
+    def process_gray(self, img, pos, qtr):
+        pcd = []
+
+        if self.last_img is not None:
+            dist = np.linalg.norm(np.array(self.last_pos) - np.array(pos))
+            if dist < 0.2:
+                print(f"Not enough movement {round(dist, 3)}")
+                return pcd
+
+        kp, des = self.orb.detectAndCompute(img, None)
+
+        rot = self.__quaternion_to_rotation_matrix(qtr)
+        P = self.K @ np.hstack((rot, pos.reshape(-1, 1)))  # Projection matrix
+
+        if self.last_img is not None:
+            
+            
+            flann = cv2.FlannBasedMatcher(self.index_params,self.search_params)
+ 
+            try:
+                all_matches = flann.knnMatch(self.last_des,des,k=2)
+            except:
+                print(f"ERROR")
+                breakpoint()
+            # ratio test as per Lowe's paper
+            matches = []
+            for match in all_matches:
+                if len(match) < 2:
+                    continue
+                (m, n) = match
+                if m.distance < 0.7 * n.distance:  # Lowe's ratio test
+                    matches.append(m)
+
+            
+            
+            # bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+            # matches = bf.match(self.last_des, des)
+            # matches = sorted(matches, key=lambda x: x.distance)
+
+            last_pts = np.float32([self.last_kp[m.queryIdx].pt for m in matches])
+            pts = np.float32([kp[m.trainIdx].pt for m in matches])
+
+
+            if len(pts) > 0 and len(last_pts) > 0:
+                pcd = self.__triangulate_points(self.last_P, P, last_pts, pts)
+                pcd = [[z, -x, -y] for (x, y, z) in pcd]
+
+            print(f"matches.len={len(pcd)}")
+            
+            # for i, depth in enumerate(points_3d[:10]):  # Show first 10 depths as an example
+                # print(f"Keypoint {i + 1}: Depth = {depth[2]:.2f} units")
+
+            img_matches = cv2.drawMatches(self.last_img, self.last_kp, img, kp, matches[:50], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+
+# Display the matches
+            cv2.imwrite(f"./img_nh/matches_{self.img_idx:04d}.jpg", img_matches)
+            self.img_idx += 1
+            # plt.figure(figsize=(12, 6))
+            # plt.title('ORB Feature Matching')
+            # plt.imshow(img_matches)
+            # plt.axis('off')
+            # plt.pause(0.05)
+            # plt.show()
+            # breakpoint()
+
+        self.last_img = img
+        self.last_kp = kp
+        self.last_des = des
+        self.last_pos = pos
+        self.last_P = P
+
+
+        return pcd
+        
+
+        
 class CV2_ORB:
     def __init__(self):
         self.orb  = cv2.ORB_create()
@@ -156,7 +277,6 @@ class MapperNavNode:
         rospy.init_node('mapper_nav', anonymous=True)
 
         self.depth_estimator_module = MonoDepth2DepthEstimatorModule()
-        self.cv_orb = CV2_ORB()
         
         self.client = airsim.MultirotorClient(ip="host.docker.internal", port=41451)
         self.client.confirmConnection()
@@ -494,15 +614,8 @@ class MapperNavNode:
         
 
         t1 = time.time()
-
-        if cfg.use_opencv_imaging:
-            img_gray = self.get_gray_img()
-            pcd = self.cv_orb.process_gray(img_gray, position, orientation)
-
-            if len(pcd) == 0:
-                return 
-        else:
-            pcd = self.depth_img_to_pcd(depth_data, fov)
+        
+        pcd = self.depth_img_to_pcd(depth_data, fov)
         
         self.logger.add_key_val("pcd_len", len(pcd))
         pos = position
@@ -550,6 +663,13 @@ class MapperNavNode:
             self.client.landAsync().join()
             self.client.armDisarm(False)
             exit(0)
+        
+        if self.vmap.no_path_cnt > cfg.no_path_watchdog_cnt:
+            print(f"No path counter exdeeded. Exiting ...")
+            self.logger.export_logs()
+            self.client.landAsync().join()
+            self.client.armDisarm(False)
+            exit(0)
                 
         if self.sequence > cfg.max_steps:
             print(f"Maximum iteration counter exdeeded. Exiting ...")
@@ -585,7 +705,6 @@ class MapperNavNode:
 
         t6 = time.time()
 
-        # print(f"cv: {round(t0-t_1, 3)} img: {round(t1-t0, 3)} to_pcd:{round(t2-t1, 3)} map:{round(t3-t2, 3)} plan:{round(t4-t3, 3)} move:{round(t5-t4, 3)} pub:{round(t6-t5, 3)}")
         print(f"img: {round(t1-t0, 3)} to_pcd:{round(t2-t1, 3)} map:{round(t3-t2, 3)} plan:{round(t4-t3, 3)} move:{round(t5-t4, 3)} pub:{round(t6-t5, 3)}")
             
 
@@ -643,6 +762,8 @@ if __name__ == '__main__':
                 node.logger.export_logs()
             if node.client is not None:
                 node.client.landAsync().join()
+                
+                # NOTE: Disarm and disable API control
                 # node.client.armDisarm(False)
                 # node.client.enableApiControl(False)
     except rospy.ROSInterruptException:

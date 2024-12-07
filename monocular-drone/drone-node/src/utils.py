@@ -13,8 +13,6 @@ def in_bounds(voxels, x, y, z):
     s=voxels.shape
     return 0 <= x < s[0] and 0 <= y < s[1] and 0 <= z < s[2] 
 
-
-
 @njit
 def clamp(v, a, b):
     if v < a:
@@ -22,7 +20,6 @@ def clamp(v, a, b):
     if v > b:
         return b
     return v
-
 
 @njit
 def bresenham3d_raycast(p1, p2, voxels):
@@ -123,29 +120,6 @@ def depth_img_to_pcd(img, skip, factor, cam_params=None, fov=None, max_depth=flo
             point_cloud.append([x, y, z])
 
     return point_cloud
-
-
-def generate_z_axis_quaternions(num_steps=10):
-    """
-    Generate a list of equally spaced quaternions representing rotations around the z-axis.
-    
-    :param num_steps: Number of equally spaced rotations (default is 10 for 360 degrees).
-    :return: List of quaternions as (w, x, y, z).
-    """
-    quaternions = []
-    # Divide 360 degrees into 'num_steps' equally spaced angles
-    angles = np.linspace(0, 2 * np.pi, num_steps, endpoint=False)  # In radians
-    
-    for theta in angles:
-        # Calculate quaternion for rotation around z-axis
-        w = np.cos(theta / 2)
-        x = 0
-        y = 0
-        z = np.sin(theta / 2)
-        quaternions.append((w, x, y, z))
-    
-    return quaternions
-
 
 def quaternion_from_two_vectors(v1, v2):
     # Normalize both vectors

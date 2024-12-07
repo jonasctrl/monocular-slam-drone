@@ -15,13 +15,14 @@ from monodepth2.networks import ResnetEncoder, DepthDecoder
 from monodepth2.layers import disp_to_depth
 
 
+base_path = os.path.dirname(os.path.abspath(__file__))
 default_model_type = "mono_640x192"
 
 class MonoDepth2DepthEstimatorModule:
     def __init__(self, model_type=default_model_type):
         self.model_type = model_type
-
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
         self.encoder = None
         self.depth_decoder = None
         self.feed_width = None
@@ -30,7 +31,7 @@ class MonoDepth2DepthEstimatorModule:
         self.setup_monodepth2()
 
     def setup_monodepth2(self):
-        model_path = f"./models/{self.model_type}/"
+        model_path = f"{base_path}/models/{self.model_type}"
         encoder_path = f"{model_path}/encoder.pth"
         depth_decoder_path = f"{model_path}/depth.pth"
 
@@ -68,6 +69,7 @@ class MonoDepth2DepthEstimatorModule:
         depth_map = disp_resized.cpu().numpy()
         depth_map = cv2.normalize(depth_map, None, 0, 1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
         
+        # NOTE: Convert to 8-bit depth map
         depth_map = (depth_map * 255).astype(np.uint8)
         
         return depth_map

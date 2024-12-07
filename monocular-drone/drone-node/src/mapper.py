@@ -7,7 +7,6 @@ import random
 from a_star import a_star_3d, a_star_setup
 from utils import bresenham3d_raycast, clamp, quaternion_from_two_vectors
 import nav_config as cfg
-from drrt import DRRT
 
 from numba import njit
 
@@ -149,12 +148,10 @@ class VoxArray:
         self.has_init_off = False
         self.init_off = np.array([0.,0.,0.])
         self.init_off_round = np.array([0,0,0])
-        # self.init_pos = self.cntr.copy()
+
         self.start:tuple = tuple(self.cntr)
         self.updated_start_or_goal:bool = False
 
-        # goal_off = np.array(cfg.goal_off)
-        # self.goal:tuple = tuple((np.array(self.start) + goal_off).astype(int))
         if len(cfg.goal_off) == 3:
             self.goal:tuple = ( \
                     int(round(self.cntr[0] + cfg.goal_off[0] / cfg.map_resolution)), \
@@ -186,16 +183,6 @@ class VoxArray:
                self.cntr[2] + cfg.path_heigth_pos_vox_tol)
         
         a_star_setup(tolerances=tolerances)
-
-        # self.pf = DStar(x_start=int(self.pos[0]), y_start=int(self.pos[1]),
-                        # x_goal=int(self.goal[0]), y_goal=int(self.goal[1]))
-
-        # pf_start = (self.pos[0],self.pos[1])
-        # pf_goal = (self.goal[0],self.goal[1])
-        # print(f"init pf start={pf_start} goal={pf_goal}")
-        if cfg.use_drrt:
-            self.pf = DRRT(start=self.pos, goal=self.goal, shape=(shape[0], shape[1]), step_size=1, max_iter=200, goal_sample_rate=0.2)
-
 
     def get_pose(self, orig_coord=True):
         if orig_coord:
@@ -229,6 +216,7 @@ class VoxArray:
 
     def get_plan(self, orig_coord=True):
         if len(self.plan_path) == 0:
+            # NOTE: Coordinate to go is not set
             # print(f"No plan path")
             return [], []
         if orig_coord:
@@ -252,17 +240,11 @@ class VoxArray:
         pt_offsetted = pt
         pt_downscaled = pt_offsetted - self.cntr + self.init_off
         pt_upscaled = self.res * pt_downscaled
-        # print(f"pt_downscaled={pt_downscaled}")
-        # print(f"map={pt} => pt={pt_upscaled}")
         
         return pt_upscaled
 
     def point_to_map_acc(self, pt):
         pt_downscaled = (pt / self.res)
-
-        # if not self.has_init_off:
-            # self.has_init_off = True
-            # self.init_off = pt_downscaled.copy()
 
         pt_offsetted = pt_downscaled + self.cntr - self.init_off 
         pt_clipped = np.clip(pt_offsetted, self.bgn, self.shp-1)
@@ -308,13 +290,13 @@ class VoxArray:
 
     def plan(self, ch_pts):
         self.start = self.pos
-        if cfg.use_drrt:
-            self.plan_drrt(ch_pts)
-        elif cfg.use_a_star:
+        if cfg.use_a_star:
             self.plan_a_star(ch_pts)
+        else:
+            print(f"planning method not implemented")
+            pass
         
     def __is_not_on_path_soft(self, tolerance:float) -> bool:
-        # return True
         if len(self.plan_path) == 0:
             return True
         c = self.pos
@@ -322,7 +304,6 @@ class VoxArray:
             diff = ((c[0] - p[0])**2 + (c[1] - p[1])**2 + (c[2] - p[2])**2) ** 0.5
             if diff <= tolerance:
                 print(f"{c} is on the path")
-                # self.plan_path = self.plan_path[i:]
                 return True
 
         print(f"{c} is NOT on the path")
@@ -388,7 +369,6 @@ class VoxArray:
                 min_diff = diff
                 min_idx = i
 
-        # print(f"min diff={min_diff} idx={min_idx}")
         if min_idx > 0:
             self.plan_path = self.plan_path[min_idx + 1:]
             self.plan_qtrs = self.plan_qtrs[min_idx + 1:]
@@ -421,22 +401,6 @@ class VoxArray:
 
             if len(self.plan_qtrs) > 0:
                 self.plan_qtrs = self.plan_qtrs[1:]
-        # print(f"found plan qtrs={self.plan_qtrs}")
-        
-
-    def plan_drrt(self, ch_pts):
-        print(f"pos={self.pos}")
-        self.replan_cnt += 1
-        self.pf.update_obstacles(ch_pts)
-        self.pf.update_start(self.pos)
-        self.pf.plan()
-        self.pf.plan(force_iters=50)
-        st_path = self.pf.get_path()
-        self.plan_path = st_path
-        self.__set_plan_qtrs()
-        # print(f"path={self.plan_path}")
-        print(f"path.len={len(self.plan_path)}")
-
         
     def add_pcd(self, pcd, cam_pos):
         return add_pcd_njit(self.vox,

@@ -34,9 +34,6 @@ map_resolution = 1
 #  data proccessing  #
 ######################
 
-# Use opencv feature matching
-use_opencv_imaging = False
-
 # Use rgb-to-depth imaging
 use_rgb_imaging = False
 
@@ -58,9 +55,7 @@ goal_off = ()
 # Goal position offset from start position in voxels
 goal_off_vox = ()
 
-# Use DRRT path finding algorithm instead of A*
-use_drrt = False
-# Use A* path finding algorithm instead of DRRT
+# Use A* path finding algorithm 
 use_a_star = True
 
 # Maximum allowed A* iterations
@@ -164,8 +159,8 @@ globals_dict = {
 def parse_arguments():
     global map_depth, map_width, map_heigth, occup_unkn, occup_min, occup_max
     global occup_thr, ray_miss_incr, ray_hit_incr, map_resolution
-    global use_opencv_imaging, use_rgb_imaging, dimg_stride
-    global dimg_min_depth, dimg_max_depth, goal_off, goal_off_vox, use_drrt, use_a_star
+    global use_rgb_imaging, dimg_stride
+    global dimg_min_depth, dimg_max_depth, goal_off, goal_off_vox, use_a_star
     global max_a_star_iters, path_drift_tolerance, path_heigth_pos_vox_tol
     global path_heigth_neg_vox_tol, path_heigth_pos_real_tol, path_heigth_neg_real_tol
     global use_real_heigth_tolerances, unf_plan_limit, publish_occup_intensities
@@ -189,7 +184,6 @@ def parse_arguments():
     parser.add_argument('--map_resolution', type=float, default=map_resolution, help="Mapping resolution.")
 
     # Data processing options
-    parser.add_argument('--use_opencv_imaging', action='store_true', default=use_opencv_imaging, help="Enable OpenCV imaging.")
     parser.add_argument('--use_rgb_imaging', action='store_true', default=use_rgb_imaging, help="Enable RGB imaging.")
     parser.add_argument('--dimg_stride', type=int, default=dimg_stride, help="Depth image downsampling stride.")
     parser.add_argument('--dimg_min_depth', type=int, default=dimg_min_depth, help="Minimum depth.")
@@ -198,7 +192,6 @@ def parse_arguments():
     # Pathfinding options
     parser.add_argument('--goal_off', nargs='+', type=float, default=goal_off, help="Goal position offset in simulation units.")
     parser.add_argument('--goal_off_vox', nargs='+', type=float, default=goal_off_vox, help="Goal position offset in voxels.")
-    parser.add_argument('--use_drrt', action='store_true', default=use_drrt, help="Use DRRT algorithm.")
     parser.add_argument('--use_a_star', action='store_true', default=use_a_star, help="Use A* algorithm.")
     parser.add_argument('--max_a_star_iters', type=int, default=max_a_star_iters, help="Maximum A* iterations.")
     parser.add_argument('--unf_max_iters_incr', type=int, default=unf_max_iters_incr, help="How much to allowed A* iterations if path finding do not get finished.")
