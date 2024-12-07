@@ -1,3 +1,0 @@
-<launch>
-    <node pkg="airsim_package" type="airsim_navigator.py" name="airsim_navigator" output="screen" launch-prefix="python3" />
-</launch>

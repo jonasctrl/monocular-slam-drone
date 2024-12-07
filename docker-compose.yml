@@ -1,110 +1,21 @@
 version: "3.8"
 
 services:
-  ros-master:
+  ros-monocular-drone-node:
     build:
-      context: ./master-node
-    container_name: ros-master-container
+      context: ./monocular-drone
+    container_name: monocular-drone-container
+    volumes:
+      - ./monocular-drone/drone-node/CMakeLists.txt:/catkin_ws/src/drone-node/CMakeLists.txt
+      - ./monocular-drone/drone-node/package.xml:/catkin_ws/src/drone-node/package.xml
+      - ./monocular-drone/drone-node/src:/catkin_ws/src/drone-node/src
+      - ./monocular-drone/drone-node/rviz:/catkin_ws/src/drone-node/rviz
+      - ./monocular-drone/drone-node/msg:/catkin_ws/src/drone-node/msg
+      - ./monocular-drone/drone-node/launch:/catkin_ws/src/drone-node/launch
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
-      - ROS_MASTER_URI=http://172.22.0.2:11311
-      - ROS_IP=172.22.0.2
-    volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix
-    networks:
-      ros_network:
-        ipv4_address: 172.22.0.2
-
-  #ros-airsim:
-    #build:
-      #context: ./airsim-node
-    #container_name: ros-airsim-container
-    #depends_on:
-      #- ros-master
-    #volumes:
-      #- ./airsim-node/airsim_package:/catkin_ws/src/airsim_package/
-      #- ./airsim-node/utils:/catkin_ws/src/airsim_package/utils
-    #environment:
-      #- DISPLAY=${DISPLAY}
-      #- QT_X11_NO_MITSHM=1
-      #- ROS_MASTER_URI=http://172.22.0.2:11311
-      #- ROS_IP=172.22.0.3
-    #networks:
-      #ros_network:
-        #ipv4_address: 172.22.0.3
-
-  ros-depth-estimation:
-    build:
-      context: ./depth-estimation-node
-    container_name: ros-depth-estimation-container
-    depends_on:
-      - ros-master
-    volumes:
-      - ./depth-estimation-node/depth_estimation_package:/catkin_ws/src/depth_estimation_package/
-    environment:
-      - DISPLAY=${DISPLAY}
-      - QT_X11_NO_MITSHM=1
-      - ROS_MASTER_URI=http://172.22.0.2:11311
-      - ROS_IP=172.22.0.4
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    runtime: nvidia
-    networks:
-      ros_network:
-        ipv4_address: 172.22.0.4
-
-  #orb-slam3:
-    #build:
-      #context: ./orb-slam3-node
-    #container_name: ros-orb-slam3-container
-    #depends_on:
-      #- ros-master
-    #environment:
-      #- DISPLAY=${DISPLAY}
-      #- QT_X11_NO_MITSHM=1
-      #- ROS_MASTER_URI=http://172.22.0.2:11311
-      #- ROS_IP=172.22.0.5
-    #volumes:
-      #- /tmp/.X11-unix:/tmp/.X11-unix
-      #- ./orb-slam3-node/ros-wrapper/config/EuRoC.yaml:/opt/catkin_ws/src/ros-wrapper/config/EuRoC.yaml
-      #- ./orb-slam3-node/ros-wrapper/launch/euroc_mono.launch:/opt/catkin_ws/src/ros-wrapper/launch/euroc_mono.launch
-      #- ./orb-slam3-node/ros-wrapper/launch/euroc_monoimu.launch:/opt/catkin_ws/src/ros-wrapper/launch/euroc_monoimu.launch
-    #deploy:
-      #resources:
-        #reservations:
-          #devices:
-            #- driver: nvidia
-              #count: 1
-              #capabilities: [gpu]
-    #runtime: nvidia
-    #networks:
-      #ros_network:
-        #ipv4_address: 172.22.0.5
-    
-  ros-mapper-nav:
-    build:
-      context: ./mapper-nav-node
-    container_name: ros-mapper-nav-container
-    depends_on:
-      - ros-master
-    volumes:
-      - ./mapper-nav-node/nav/CMakeLists.txt:/catkin_ws/src/nav/CMakeLists.txt
-      - ./mapper-nav-node/nav/package.xml:/catkin_ws/src/nav/package.xml
-      - ./mapper-nav-node/nav/scripts:/catkin_ws/src/nav/scripts
-      - ./mapper-nav-node/nav/rviz:/catkin_ws/src/nav/rviz
-      - ./mapper-nav-node/nav/launch:/catkin_ws/src/nav/launch
-      - ./mapper-nav-node/nav/msg:/catkin_ws/src/nav/msg
-      - ./mapper-nav-node/nav/data:/catkin_ws/src/nav/data
-    environment:
-      - DISPLAY=${DISPLAY}
-      - QT_X11_NO_MITSHM=1
-      - ROS_MASTER_URI=http://172.22.0.2:11311
+      - ROS_MASTER_URI=http://172.22.0.6:11311
       - ROS_IP=172.22.0.6
     deploy:
       resources:

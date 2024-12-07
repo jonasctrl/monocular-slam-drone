@@ -1,4 +1,0 @@
-<launch>
-    <node pkg="airsim_package" type="airsim_point_cloud.py" name="airsim_point_cloud" output="screen" launch-prefix="python3" />
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find airsim_package)/rviz/airsim_point_cloud.rviz" />
-</launch>

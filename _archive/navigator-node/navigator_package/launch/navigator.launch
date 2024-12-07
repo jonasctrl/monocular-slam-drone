@@ -1,3 +1,0 @@
-<launch>
-  <node name="navigator_node" pkg="navigator_package" type="navigator_node" output="screen" />
-</launch>
