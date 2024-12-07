@@ -54,6 +54,7 @@ RUN pip3 install numpy scipy numpy-quaternion
 RUN pip3 install airsim
 RUN pip3 install numba
 RUN pip3 install matplotlib
+RUN pip3 install pyfiglet
 
 RUN mkdir -p /catkin_ws/src
 WORKDIR /catkin_ws
