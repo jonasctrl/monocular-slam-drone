@@ -109,7 +109,7 @@ def precompile():
 
     print(f"done")
 
-@njit()
+@njit(cache=True)
 def make_fat_path(path):
     fat_path = set()
     for p in path:
@@ -379,26 +379,29 @@ class VoxArray:
         self.last_path_idx = min_idx
 
     def plan_a_star(self, ch_pts):
-        if not self.do_need_new_plan(ch_pts):
-            self.walk_path()
-        else:
-            print(f"new plan {self.start} => {self.goal}")
-
-            self.replan_cnt += 1
-            self.plan_path, self.plan_unf = a_star_3d(self.vox, self.pos, self.goal)
-            self.fat_path = make_fat_path(self.plan_path)
-            self.updated_start_or_goal = False
-            print(f"found path={self.plan_path}")
-            self.__set_plan_qtrs()
-
-            if len(self.plan_path) > 0:
-                self.plan_path = self.plan_path[1:]
-                self.no_path_cnt = 0
+        try:
+            if not self.do_need_new_plan(ch_pts):
+                self.walk_path()
             else:
-                self.no_path_cnt += 1
+                print(f"new plan {self.start} => {self.goal}")
 
-            if len(self.plan_qtrs) > 0:
-                self.plan_qtrs = self.plan_qtrs[1:]
+                self.replan_cnt += 1
+                self.plan_path, self.plan_unf = a_star_3d(self.vox, self.pos, self.goal)
+                self.fat_path = make_fat_path(self.plan_path)
+                self.updated_start_or_goal = False
+                print(f"found path={self.plan_path}")
+                self.__set_plan_qtrs()
+
+                if len(self.plan_path) > 0:
+                    self.plan_path = self.plan_path[1:]
+                    self.no_path_cnt = 0
+                else:
+                    self.no_path_cnt += 1
+
+                if len(self.plan_qtrs) > 0:
+                    self.plan_qtrs = self.plan_qtrs[1:]
+        except Exception as e:
+            print(f"Error in A* planning: {e}")
         
     def add_pcd(self, pcd, cam_pos):
         return add_pcd_njit(self.vox,
