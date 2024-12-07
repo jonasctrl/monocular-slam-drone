@@ -12,13 +12,13 @@ from numba import njit
 
 grid_shape = np.array([cfg.map_depth, cfg.map_width, cfg.map_heigth]).astype(int)
 
-@njit
+@njit(cache=True)
 def get_empty_space_pcd(vox):
     x, y, z = np.nonzero((cfg.occup_min <= vox) & (vox < cfg.occup_thr))
     pcd = np.vstack((x, y, z)).transpose()
     return pcd
 
-@njit
+@njit(cache=True)
 def get_occupied_space_pcd(vox):
     x, y, z = np.nonzero(vox >= cfg.occup_thr)
     pcd = np.vstack((x, y, z)).transpose()
@@ -28,7 +28,7 @@ def get_occupied_space_pcd(vox):
     values = np.array(vals, dtype=np.int8)
     return pcd, values
 
-@njit
+@njit(cache=True)
 def unique_pcd_njit(pcd):
     new_pcd = []
     for i in range(pcd.shape[0]):
@@ -44,8 +44,7 @@ def unique_pcd_njit(pcd):
     ret_pcd = np.array(new_pcd, dtype=np.int64)
     return ret_pcd
 
-
-@njit
+@njit(cache=True)
 def add_pcd_njit(vox, pcd, cam_pt, resolution, off):
     # returns list changed voxels and new value as list of (x,y,z,val)
     changed_pts = []
@@ -59,7 +58,6 @@ def add_pcd_njit(vox, pcd, cam_pt, resolution, off):
     coord_clp = np.clip(coord, bgn, end)
     unique_pcd = unique_pcd_njit(coord_clp)
 
-    
     for point in unique_pcd:
         (x, y, z) = point
         cols = bresenham3d_raycast(cam_pt, point, vox)
@@ -111,6 +109,7 @@ def precompile():
 
     print(f"done")
 
+@njit()
 def make_fat_path(path):
     fat_path = set()
     for p in path:

@@ -125,10 +125,10 @@ exit_on_goal = False
 camera_name = "fc"
 
 # Maximum frequency of simulation
-max_sim_freq= 20
+max_sim_freq= 30
 
 # Maximum speed of viecle in simulation
-speed = 2.0
+speed = 4.0
 
 #############
 #  logging  #

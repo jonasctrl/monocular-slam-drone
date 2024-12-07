@@ -468,7 +468,6 @@ class DroneController:
     def __init__(self, client):
         self.client = client
 
-
     def move_along_path(self, path):
         path = [airsim.Vector3r(x, -y, -z) for (x, y, z) in path]
         self.client.moveOnPathAsync(

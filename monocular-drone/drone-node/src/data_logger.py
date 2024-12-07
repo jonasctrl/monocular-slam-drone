@@ -11,13 +11,11 @@ class DataLogger(object):
         self.data["cfg"] = cfg.get_configs()
         self.logfile = cfg.logfile
 
-
     def new_entry(self):
         if self.logfile is None:
             return
 
         self.entry = dict()
-
 
     def push_entry(self):
         if self.logfile is None:
@@ -25,7 +23,6 @@ class DataLogger(object):
 
         if self.entry is not None and len(self.entry.keys()) > 0:
             self.log.append(self.entry)
-
 
     def add_key_val(self, key, val):
         if self.logfile is None:
@@ -38,7 +35,6 @@ class DataLogger(object):
             return
 
         self.entry[key] = val
-
 
     def export_logs(self):
         if self.logfile is None:
