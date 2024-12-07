@@ -52,7 +52,6 @@ class MapperNavNode:
         self.ctl = DroneController(self.client)
         self.logger = DataLogger()
 
-
         self.occupied_pub = rospy.Publisher('/occupied_space', PointCloud2, queue_size=1)
         self.empty_pub = rospy.Publisher('/empty_space', PointCloud2, queue_size=1)
         self.cam_path_pub = rospy.Publisher('/cam_path', Path, queue_size=1)
@@ -151,7 +150,6 @@ class MapperNavNode:
 
         self.pose_pub.publish(pose_stamped)
 
-
     def publish_start_msg(self):
         (x, y, z) = self.vmap.get_start(orig_coord=False)
         point_msg = PointStamped()
@@ -241,13 +239,11 @@ class MapperNavNode:
         img_gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
         return img_gray
 
-    
     def estimate_depth(self):
         img_rgb = self.get_rgb_img()
         depth_map = self.depth_estimator_module.generate_depth_map(img_rgb)
 
         return depth_map
-        
     
     def get_depth_img(self):
         response = self.client.simGetImages(
@@ -256,7 +252,6 @@ class MapperNavNode:
         depth_map= np.array(response.image_data_float, dtype=np.float32).reshape(response.height, response.width)
         return depth_map
         
-
     def depth_img_to_pcd(self, dimg, fov):
         factor = 1.0
         (image_height, image_width) = dimg.shape
@@ -296,9 +291,7 @@ class MapperNavNode:
         avel = (av.x_val, -av.y_val, -av.z_val)
         aacc = (aa.x_val, -aa.y_val, -aa.z_val)
 
-
         return vel, acc, avel, aacc
-
 
     def get_camera_info(self):
         camera_info = self.client.simGetCameraInfo(cfg.camera_name)
@@ -315,11 +308,11 @@ class MapperNavNode:
 
     def get_collisions(self):
         collision_info = self.client.simGetCollisionInfo()
-        has_collided = collision_info.has_collided  # Boolean indicating if a collision occurred
-        collision_object_id = collision_info.object_id  # ID of the object involved in the collision
+        # Boolean indicating if a collision occurred
+        has_collided = collision_info.has_collided  
+        collision_object_id = collision_info.object_id  
 
         return has_collided, collision_object_id
-
 
     def step(self):
         t0 = time.time()
@@ -345,7 +338,6 @@ class MapperNavNode:
         else:
             self.vmap.coll_cnt = 0
 
-
         self.logger.add_key_val("time_start", time.time())
         if cfg.use_rgb_imaging:
             depth_data = self.estimate_depth()
@@ -355,7 +347,6 @@ class MapperNavNode:
         if depth_data is None:
             rospy.logwarn("No depth data")
         
-
         t1 = time.time()
         
         pcd = self.depth_img_to_pcd(depth_data, fov)
@@ -373,16 +364,15 @@ class MapperNavNode:
         self.vmap.plan(ch_pts)
         t4 = time.time()
 
-
         path, _ = self.vmap.get_plan(orig_coord=True)
         self.logger.add_key_val("plan_len", len(path))
         self.logger.add_key_val("replan_cnt", self.vmap.replan_cnt)
+        
         cur_pos = self.vmap.get_pose(orig_coord=True)[0]
         self.logger.add_key_val("map_pos", tuple(cur_pos))
         self.logger.add_key_val("plan_pos",  tuple(path[0]) if len(path) > 0 else tuple(cur_pos))
 
         self.logger.add_key_val("time_end", time.time())
-        
         
         goal_orig = self.vmap.point_from_map(self.vmap.goal)
         goal_err = np.linalg.norm(np.array(cur_pos) - np.array(goal_orig))
@@ -423,7 +413,6 @@ class MapperNavNode:
         if len(path) > 1:
             self.ctl.move_along_path(path)
 
-
         t5 = time.time()
         
         if cfg.publish_occup:
@@ -435,20 +424,20 @@ class MapperNavNode:
         if cfg.publish_pose:
             self.publish_map_pose_msg()
 
-
         if cfg.publish_path:
             self.publish_cam_path_msg()
 
         if cfg.publish_plan:
             self.publish_start_msg()
             self.publish_goal_msg()
-            self.publish_plan_path_msg(orig=False) # Map scale
-            self.publish_plan_path_msg(orig=True) # Original scale
+            # Map scale
+            self.publish_plan_path_msg(orig=False)
+            # Original scale 
+            self.publish_plan_path_msg(orig=True) 
 
         t6 = time.time()
 
         print(f"img: {round(t1-t0, 3)} to_pcd:{round(t2-t1, 3)} map:{round(t3-t2, 3)} plan:{round(t4-t3, 3)} move:{round(t5-t4, 3)} pub:{round(t6-t5, 3)}")
-            
 
     def run(self):
         rate = rospy.Rate(cfg.max_sim_freq)
@@ -458,7 +447,6 @@ class MapperNavNode:
 
             self.sequence += 1
             rate.sleep()
-
 
 ##################
 #  DRONE CONTROL #
@@ -503,7 +491,6 @@ if __name__ == '__main__':
                 node.logger.export_logs()
             if node.client is not None:
                 node.client.landAsync().join()
-                
                 # NOTE: Disarm and disable API control
                 # node.client.armDisarm(False)
                 # node.client.enableApiControl(False)

@@ -119,7 +119,6 @@ def make_fat_path(path):
                     fat_path.add((p[0] + i, p[1] + j, p[2] + k))
     return fat_path
 
-
 class VoxArray:
     def __init__(self, resolution:float, shape:tuple):
         self.shp = np.array(shape).astype(int)
@@ -355,7 +354,6 @@ class VoxArray:
             return True
 
         return False
-
 
     def walk_path(self):
         min_diff = float("inf")
