@@ -10,7 +10,6 @@ services:
       - ./monocular-drone/drone-node/package.xml:/catkin_ws/src/drone-node/package.xml
       - ./monocular-drone/drone-node/src:/catkin_ws/src/drone-node/src
       - ./monocular-drone/drone-node/rviz:/catkin_ws/src/drone-node/rviz
-      - ./monocular-drone/drone-node/msg:/catkin_ws/src/drone-node/msg
       - ./monocular-drone/drone-node/launch:/catkin_ws/src/drone-node/launch
     environment:
       - DISPLAY=${DISPLAY}

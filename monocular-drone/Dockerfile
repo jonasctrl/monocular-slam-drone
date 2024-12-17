@@ -80,7 +80,6 @@ WORKDIR /catkin_ws/src
 COPY ./drone-node/launch ./drone-node/launch
 COPY ./drone-node/rviz ./drone-node/rviz
 COPY ./drone-node/src ./drone-node/src
-COPY ./drone-node/msg ./drone-node/msg
 COPY ./drone-node/CMakeLists.txt ./drone-node/CMakeLists.txt
 COPY ./drone-node/package.xml ./drone-node/package.xml
 
