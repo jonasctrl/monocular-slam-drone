@@ -1,3 +1,0 @@
-<launch>
-    <node pkg="airsim_package" type="airsim_point_cloudV2.py" name="airsim_point_cloudV2" output="screen" launch-prefix="python3" />
-</launch>

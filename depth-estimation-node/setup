@@ -1,9 +1,0 @@
-docker run --gpus all -it --rm -e DISPLAY=192.168.0.120:0 --network ros_network -v /tmp/.X11-unix:/tmp/.X11-unix "py-depth" bash
-
-setup:
-1. cd /catkin_ws/src/depth_estimation_package
-2. source /catkin_ws/devel/setup.bash
-3. roslaunch depth_estimation_package depth_estimation.launch
-
-cd /catkin_ws/src/depth_estimation_package && source /catkin_ws/devel/setup.bash && roslaunch depth_estimation_package depth_estimation.launch
-cd /catkin_ws/src/depth_estimation_package && source /catkin_ws/devel/setup.bash && roslaunch depth_estimation_package depth_estimationV2.launch
