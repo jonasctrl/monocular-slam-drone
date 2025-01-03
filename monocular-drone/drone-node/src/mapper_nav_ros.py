@@ -14,7 +14,8 @@ from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, PointStamped, Point
 from std_msgs.msg import Header
 
-from monodepth import MonoDepth2DepthEstimatorModule
+from depth import DepthAnythingEstimatorModule
+from depthV2 import DepthAnythingEstimatorModuleV2
 import numpy as np
 import cv2
 from scipy.spatial.transform import Rotation as R
@@ -34,7 +35,7 @@ class MapperNavNode:
         self.vmap = VoxArray(resolution=cfg.map_resolution, shape=(cfg.map_width,cfg.map_depth,cfg.map_heigth))
         rospy.init_node('mapper_nav', anonymous=True)
 
-        self.depth_estimator_module = MonoDepth2DepthEstimatorModule()
+        self.depth_estimator_module = DepthAnythingEstimatorModuleV2()
         
         self.client = airsim.MultirotorClient(ip="host.docker.internal", port=41451)
         self.client.confirmConnection()
@@ -396,21 +397,7 @@ class MapperNavNode:
             self.client.landAsync().join()
             self.client.armDisarm(False)
             exit(0)
-        
-        if self.vmap.no_path_cnt > cfg.no_path_watchdog_cnt:
-            print(f"No path counter exdeeded. Exiting ...")
-            self.logger.export_logs()
-            self.client.landAsync().join()
-            self.client.armDisarm(False)
-            exit(0)
                 
-        if self.sequence > cfg.max_steps:
-            print(f"Maximum iteration counter exdeeded. Exiting ...")
-            self.logger.export_logs()
-            self.client.landAsync().join()
-            self.client.armDisarm(False)
-            exit(0)
-        
         if len(path) > 1:
             self.ctl.move_along_path(path)
 
@@ -466,8 +453,10 @@ class DroneController:
             drivetrain=airsim.DrivetrainType.ForwardOnly,
             yaw_mode=airsim.YawMode(is_rate=False, yaw_or_rate=0),
             lookahead=-1,
-            adaptive_lookahead=0
-        )
+            adaptive_lookahead=0)
+
+    def rotate_360(self):
+        self.client.rotateToYawAsync(360, 1).join()
 
 def display_banner(version):    
     banner = pyfiglet.figlet_format("MONOCULAR DRONE", font="slant")

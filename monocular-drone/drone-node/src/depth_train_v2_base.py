@@ -113,15 +113,15 @@ class BerHuLoss(nn.Module):
 
 def load_pretrained_model():
     model = DepthAnythingV2(
-        encoder='vitl',
+        encoder='vitb',
         features=128,
         out_channels=[96, 192, 384, 768],
         use_bn=False,
         use_clstoken=False,
-        #max_depth=20.0
+        max_depth=100.0
     )
 
-    weights_path = "depth_anything_v2_metric_vkitti_vitl.pth"
+    weights_path = "depth_anything_v2_metric_vkitti_vitb.pth"
     if not os.path.exists(weights_path):
         raise FileNotFoundError(f"Pretrained weights not found at {weights_path}")
 
@@ -155,15 +155,6 @@ def train_depth_anything(data_dirs, num_epochs=10, batch_size=8, learning_rate=1
 
     # Set up transforms
     transform = transforms.Compose([
-        Resize(
-            width=518,
-            height=518,
-            resize_target=True,
-            keep_aspect_ratio=False,
-            ensure_multiple_of=14,
-            resize_method="minimal",
-            image_interpolation_method=cv2.INTER_CUBIC,
-        ),
         NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         PrepareForNet(),
     ])
@@ -298,8 +289,7 @@ def train_depth_anything(data_dirs, num_epochs=10, batch_size=8, learning_rate=1
 
 if __name__ == "__main__":
     data_dirs = [
-        "./data-nh",
-        "./airsim_images-MS/airsim_images-MS",
+        "C:/Users/Jonas/Desktop/airsim_images_blocks/airsim_images",
     ]
 
     print("Starting Depth-Anything-V2 training script")

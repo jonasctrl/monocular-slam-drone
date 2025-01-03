@@ -28,14 +28,14 @@ ray_miss_incr = -1
 ray_hit_incr = 8
 
 # Mapping resolution, i.e. amount of simulation distance units (m, ft, cm, etc.) for each voxel
-map_resolution = 1
+map_resolution = 2
 
 ######################
 #  data proccessing  #
 ######################
 
 # Use rgb-to-depth imaging
-use_rgb_imaging = False
+use_rgb_imaging = True
 
 # Stride at which depth image is downsampled
 dimg_stride = 2
@@ -43,7 +43,7 @@ dimg_stride = 2
 # Minimum distance to point ((in simulation distance units)
 dimg_min_depth = 1
 # Maximum distance to point (in simulation distance units)
-dimg_max_depth = 50
+dimg_max_depth = 20
 
 ##################
 #  path finding  #
@@ -128,7 +128,7 @@ camera_name = "fc"
 max_sim_freq= 30
 
 # Maximum speed of viecle in simulation
-speed = 4.0
+speed = 3
 
 #############
 #  logging  #

@@ -4,26 +4,29 @@ from numba import njit
 
 import nav_config as cfg
 
-def_tol = (0,0)
-tol = (0,0)
+def_tol = (0, 0)
+tol = (0, 0)
 max_iters = cfg.max_a_star_iters
 
 
-@njit(fastmath=True)
-def heuristic_manhattan(p1, p2):
-    return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1]) + abs(p1[2] - p2[2])
+# Heuristic: Euclidean distance between two points
+# @njit
+def heuristic(p1, p2):
+    return np.linalg.norm(np.array(p1) - np.array(p2), ord=None)
+
 
 @njit
 def v_empty(v):
     return cfg.occup_unkn == v or cfg.occup_min <= v < cfg.occup_thr
 
+
 @njit
 def is_inside(pt, bounds):
-    return  0 < pt[0] < bounds[0]-1 and \
-            0 < pt[1] < bounds[1]-1 and \
-            0 <= pt[2] < bounds[2]-1
+    return 0 < pt[0] < bounds[0] - 1 and \
+        0 < pt[1] < bounds[1] - 1 and \
+        0 <= pt[2] < bounds[2] - 1
 
-@njit(fastmath=True)
+@njit
 def skip_dangerous_blocks2(pt, grid):
     for dx in [-1, 0, 1]:
         for dy in [-1, 0, 1]:
@@ -32,12 +35,12 @@ def skip_dangerous_blocks2(pt, grid):
                     return True
     return False
 
+
 # Get neighbors in a 3D grid
 @njit
 def get_neighbors(node, grid, height_restr):
     neighbors = []
     x, y, z = node
-    
     # Check all possible directions in a 3D grid (26 possible neighbors)
     for dx in [-1, 0, 1]:
         for dy in [-1, 0, 1]:
@@ -55,13 +58,15 @@ def get_neighbors(node, grid, height_restr):
                         continue
 
                     if v_empty(grid[new_x, new_y, new_z]):
+                        # if cfg.occup_unkn == v or cfg.occup_min <= v < cfg.occup_thr:
                         neighbors.append((new_x, new_y, new_z))
     return neighbors
+
 
 # A* algorithm for 3D space
 def a_star_3d(grid, start, goal):
     global max_iters, tol
-    
+
     for pt in [start, goal]:
         for pd, gd in zip(pt, grid.shape):
             if pd < 1 or pd > gd - 2:
@@ -71,26 +76,25 @@ def a_star_3d(grid, start, goal):
     # Priority queue for the open list (min-heap)
     open_list = []
     heapq.heappush(open_list, (0, start))  # (cost, node)
-    
+
     # Dictionary to store the cost of the shortest path to each node
     g_cost = {start: 0}
-    
+
     # Dictionary to store the path
     came_from = {start: None}
-    
+
     # Dictionary to store the total estimated cost (f = g + h)
-    f_cost = {start: heuristic_manhattan(start, goal)}
-    
+    f_cost = {start: heuristic(start, goal)}
+
     iters = 0
     while open_list:
         iters += 1
         # Get the node with the lowest f_cost
         current_f_cost, current_node = heapq.heappop(open_list)
-        
+
         # If the goal is reached, reconstruct the path
         is_unf = iters > max_iters
 
-        
         if current_node == goal or is_unf:
             if is_unf:
                 # Increase maximum iteration count and allowed tolerances if
@@ -105,29 +109,26 @@ def a_star_3d(grid, start, goal):
             while current_node:
                 path.append(current_node)
                 current_node = came_from[current_node]
-                
-            # Return reversed path (from start to goal)
-            return path[::-1], is_unf   
-        
+            return path[::-1], is_unf  # Returnreversed path (from start to goal)
+
+        # Explore neighbors
         for neighbor in get_neighbors(current_node, grid, tol):
-            tentative_g_cost = g_cost[current_node] + 1 
+            tentative_g_cost = g_cost[current_node] + 1  # Cost from start to neighbor (assuming uniform grid)
 
             if neighbor not in g_cost or tentative_g_cost < g_cost[neighbor]:
                 # Update the cost and path
                 g_cost[neighbor] = tentative_g_cost
-                f_cost[neighbor] = tentative_g_cost + heuristic_manhattan(neighbor, goal)
+                f_cost[neighbor] = tentative_g_cost + heuristic(neighbor, goal)
                 came_from[neighbor] = current_node
-                
+
                 # Add the neighbor to the open list
                 heapq.heappush(open_list, (f_cost[neighbor], neighbor))
-    
+
+    # Return empty list if no path is found
     return [], True
+
 
 def a_star_setup(tolerances):
     global tol, def_tol
     tol = tolerances
     def_tol = tolerances
-
-
-
-

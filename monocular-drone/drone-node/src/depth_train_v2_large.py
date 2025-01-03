@@ -290,7 +290,7 @@ def train_depth_anything(data_dirs, num_epochs=10, batch_size=8, learning_rate=1
 if __name__ == "__main__":
     data_dirs = [
         "./data-nh",
-        #"./airsim_images-MS/airsim_images-MS",
+        "C:/Users/Jonas/Desktop/airsim_images26kseed8/airsim_images",
     ]
 
     print("Starting Depth-Anything-V2 training script")

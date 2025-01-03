@@ -15,7 +15,7 @@ import torchvision.transforms as transforms
 
 class DepthAnythingEstimatorModuleV2:
     print("DepthAnythingEstimatorModuleV2")
-    def __init__(self, model_path="/catkin_ws/src/drone-node/src/depth_anything_v2_checkpoint_epoch_8.pth"):
+    def __init__(self, model_path="/catkin_ws/src/drone-node/src/depth_anything_v2_checkpoint_epoch_22.pth"):
         self.model_path = model_path
         self.model = None
         self.device = None
@@ -26,14 +26,7 @@ class DepthAnythingEstimatorModuleV2:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print(f"Using device: {self.device}")
 
-        self.model = DepthAnythingV2(
-            encoder='vitl',
-            features=256,
-            out_channels=[256, 512, 1024, 1024],
-            use_bn=False,
-            use_clstoken=False,
-            max_depth=100.0
-        )
+        self.model = self.load_pretrained_model_small()
 
         checkpoint = torch.load(self.model_path, map_location=self.device)
         self.model.load_state_dict(checkpoint['model_state_dict'])
@@ -41,15 +34,6 @@ class DepthAnythingEstimatorModuleV2:
         self.model.eval()
 
         self.transform = transforms.Compose([
-            Resize(
-                width=518,
-                height=518,
-                resize_target=True,
-                keep_aspect_ratio=False,
-                ensure_multiple_of=14,
-                resize_method="minimal",
-                image_interpolation_method=cv2.INTER_CUBIC,
-            ),
             NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             PrepareForNet(),
         ])
@@ -82,3 +66,23 @@ class DepthAnythingEstimatorModuleV2:
         except Exception as e:
             print(f"Error in depth estimation: {str(e)}")
             return None
+
+    def load_pretrained_model_base(self):
+        return DepthAnythingV2(
+            encoder='vitb',
+            features=128,
+            out_channels=[96, 192, 384, 768],
+            use_bn=False,
+            use_clstoken=False,
+            max_depth=100.0
+        )
+
+    def load_pretrained_model_small(self):
+        return DepthAnythingV2(
+            encoder='vits',
+            features=64,
+            out_channels=[48, 96, 192, 384],
+            use_bn=False,
+            use_clstoken=False,
+            max_depth=100.0
+        )
