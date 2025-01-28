@@ -1,0 +1,3 @@
+[submodule "monocular-drone/drone-node/src/depth_anything_v2"]
+	path = monocular-drone/drone-node/src/depth_anything_v2
+	url = https://github.com/DepthAnything/Depth-Anything-V2

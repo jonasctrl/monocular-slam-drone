@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>drone-node</name>
+  <version>1.0.0</version>
+  <description>The monucular drone package</description>
+  <maintainer email="root@root.com">root</maintainer>
+  <license>NONE</license>
+
+  <build_depend>message_generation</build_depend> 
+  <exec_depend>message_runtime</exec_depend> 
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>rospy</build_depend> 
+  <exec_depend>rospy</exec_depend> 
+
+  <build_depend>std_msgs</build_depend> 
+  <exec_depend>std_msgs</exec_depend> 
+
+  <build_depend>nav_msgs</build_depend> 
+  <exec_depend>nav_msgs</exec_depend> 
+
+  <build_depend>sensor_msgs</build_depend> 
+  <exec_depend>sensor_msgs</exec_depend> 
+
+  <build_depend>geometry_msgs</build_depend> 
+  <exec_depend>geometry_msgs</exec_depend> 
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>
+
+
+
+

@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  ros-monocular-drone-node:
+    build:
+      context: ./monocular-drone
+    container_name: monocular-drone-container
+    volumes:
+      - ./monocular-drone/drone-node/CMakeLists.txt:/catkin_ws/src/drone-node/CMakeLists.txt
+      - ./monocular-drone/drone-node/package.xml:/catkin_ws/src/drone-node/package.xml
+      - ./monocular-drone/drone-node/src:/catkin_ws/src/drone-node/src
+      - ./monocular-drone/drone-node/rviz:/catkin_ws/src/drone-node/rviz
+      - ./monocular-drone/drone-node/launch:/catkin_ws/src/drone-node/launch
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - ROS_MASTER_URI=http://172.22.0.6:11311
+      - ROS_IP=172.22.0.6
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    runtime: nvidia
+    networks:
+      ros_network:
+        ipv4_address: 172.22.0.6
+
+networks:
+  ros_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
