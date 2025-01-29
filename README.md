@@ -13,14 +13,14 @@ When using A Framework for Autonomous UAV Navigation Based on Monocular Depth Es
   title={A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation},
   author={Gaigalas Jonas and Perkauskas Linas and Gricius Henrikas, Kanapickas Tomas and Kriščiūnas Andrius},
   journal={TODO},
-  year={2024},
+  year={2025},
   publisher={TODO},
 }
 ```
 
 ## About project
 
-The solution utilizes a depth image estimation model to create an occupancy grid map of the surrounding area and uses an A\* path planning algorithm to find optimal paths to end goals while simultaneously navigating around the obstacles. The simulation is conducted using AirSim in Unreal Engine. With this work, an open-source framework was proposed and scenarios in three different open-source virtual environments, varying in complexity, to test and compare autonomous UAV navigation methods based on vision.
+The solution utilizes a depth image estimation model to create an occupancy grid map of the surrounding area and uses an A\* path planning algorithm to find optimal paths to end goals while simultaneously navigating around the obstacles. The simulation is conducted using AirSim in Unreal Engine. With this work, an open-source framework was proposed that would use virtual environment and allow to test and compare autonomous UAV navigation methods based on vision.
 
 ## Prerequisites
 
@@ -74,9 +74,9 @@ The proposed architecture for an autonomous monocular drone navigation system is
 
 The navigation system was further divided into three modules:
 
-- Depth estimation module (DEM) - This module is responsible for estimating depth images from the RGB camera feed provided by the simulation environment. For this task, the "Depth Anything V2" model was utilized.
-- Mapper module (MM) - The purpose of MM is to build and iteratively update the oc-cupancy map-based 3D environment using depth images supplied by DEM and camera position and orientation retrieved from the simulation environment.
-- Navigation module (NM) - This module finds viable path trajectories to specified points in an everchanging mapped 3D environment. Path-finding logic is based on the A\* algorithm. The output of this module is fed back to the simulation environ-ment.
+- Depth estimation module (DEM) - responsible for estimating depth images from the RGB camera feed provided by the simulation environment. Current depth interface is based on "Depth Anything V2" model.
+- Mapper module (MM) - builds and iteratively updates the occupancy map-based 3D environment using depth images supplied by DEM and camera position and orientation retrieved from the simulation environment.
+- Navigation module (NM) - finds viable path trajectories to specified points in an everchanging mapped 3D environment. Path-finding logic is based on the A* algorithm. The output of this module is fed back to the simulation environ-ment.
 
 ## Depth Mapping in 3D Space
 
