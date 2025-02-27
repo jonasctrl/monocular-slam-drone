@@ -124,12 +124,12 @@ The navigation system consists of three modules:
 
 The following images demonstrate the depth estimation and mapping process:
 
-![](./assets/images/rviz-example.png)
+| Camera Image | 3D Mapping Visualization |
+| :---: | :---: |
+| ![Camera image from the simulation environment](./assets/images/l1.png) | ![3D space mapping visualization](./assets/images/l2.png) |
 
-- **Left**: Camera image from the simulation environment
-- **Right**: 3D space mapping visualization
-  - Red grid: uncertain depth space
-  - Blue grid: occupied-known space
+> [!tip]
+> The red voxel grid shown in Rviz is the uncertain depth space and the blue one is the occupied-known space.
 
 ## Setting Up X11 Server for Display Forwarding
 
@@ -152,3 +152,7 @@ xhost +
 
 > [!tip]
 > To test the X11 setup, run `xclock` inside the container. If you see a clock window appear, your X11 server is configured correctly.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
