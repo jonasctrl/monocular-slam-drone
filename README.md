@@ -11,7 +11,7 @@ The solution utilizes a depth image estimation model to create an occupancy grid
 > [!important]
 > This project provides an open-source framework that uses a virtual environment to test and compare autonomous UAV navigation methods based on monocular vision.
 >
-> Current drone navigation systems is proof of concept. Refer to the [Citation](#citation) section for the journal paper to learn more about the research and concerns addressed application in real-world scenarios.
+> Current drone navigation system is proof of concept. Refer to the [Citation](#citation) section for the journal paper to learn more about the research and concerns addressed application in real-world scenarios.
 
 ## Citation
 
@@ -99,9 +99,9 @@ python3 /catkin_ws/src/drone-node/src/mapper_nav_ros.py
 
 ## Architecture
 
-The proposed architecture for an autonomous monocular drone navigation system is depicted below:
+The proposed architecture for an autonomous monocular drone navigation system is depicted in following diagram:
 
-![](./assets/images/architecture.png)
+![Architecture diagram for autonomous monocular drone navigation system](./assets/images/architecture.png)
 
 The system is divided into:
 
