@@ -1,29 +1,22 @@
 # FAUN-MoDe: Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation
-
 |                                                                                  UAV                                                                                   |
 | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-| [![IROS 2025: A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation](./assets/gifs/fly-example.gif)](https://www.youtube.com/watch?v=VIDEO-ID) |
-
+| [![IROS 2025: A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation](./assets/gifs/fly-example.gif)] |
 ## About Project
-
 The solution utilizes a depth image estimation model to create an occupancy grid map of the surrounding area and uses an A\* path planning algorithm to find optimal paths to end goals while simultaneously navigating around obstacles. The simulation is conducted using AirSim in Unreal Engine.
-
 > [!important]
 > This project provides an open-source framework that uses a virtual environment to test and compare autonomous UAV navigation methods based on monocular vision.
 >
 > Current drone navigation system is proof of concept. Refer to the [Citation](#citation) section for the journal paper to learn more about the research and concerns addressed application in real-world scenarios.
-
 ## Citation
-
-When using A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation, please cite the following journal paper ([pdf](...), [video](...))
-
+When using A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation, please cite the following journal paper ([pdf](https://www.mdpi.com/2504-446X/9/4/236/pdf), [website](https://www.mdpi.com/2504-446X/9/4/236))
 ```bibtex
 @article{monocular-slam-drone,
   title={A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation},
-  author={Gaigalas Jonas and Perkauskas Linas and Gricius Henrikas, Kanapickas Tomas and Kriščiūnas Andrius},
-  journal={TODO},
+  author={Gaigalas Jonas and Perkauskas Linas and Gricius Henrikas and Kanapickas Tomas and Kriščiūnas Andrius},
+  journal={Drones},
   year={2025},
-  publisher={TODO},
+  publisher={MDPI},
 }
 ```
 
