@@ -1,7 +1,7 @@
-# FAUN-MoDe: Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation
+# A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation
 |                                                                                  UAV                                                                                   |
 | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-| [![IROS 2025: A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation](./assets/gifs/fly-example.gif)] |
+| ![IROS 2025: A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation](./assets/gifs/fly-example.gif) |
 ## About Project
 The solution utilizes a depth image estimation model to create an occupancy grid map of the surrounding area and uses an A\* path planning algorithm to find optimal paths to end goals while simultaneously navigating around obstacles. The simulation is conducted using AirSim in Unreal Engine.
 > [!important]
