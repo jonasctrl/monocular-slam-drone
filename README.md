@@ -1,30 +1,49 @@
-# A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation
-|                                                                                  UAV                                                                                   |
-| :--------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-| ![IROS 2025: A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation](./assets/gifs/fly-example.gif) |
-## About Project
-The solution utilizes a depth image estimation model to create an occupancy grid map of the surrounding area and uses an A\* path planning algorithm to find optimal paths to end goals while simultaneously navigating around obstacles. The simulation is conducted using AirSim in Unreal Engine.
-> [!important]
-> This project provides an open-source framework that uses a virtual environment to test and compare autonomous UAV navigation methods based on monocular vision.
->
-> Current drone navigation system is proof of concept. Refer to the [Citation](#citation) section for the journal paper to learn more about the research and concerns addressed application in real-world scenarios.
+# A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation  
+**ROS-Noetic monocular-SLAM with A* path-planner for autonomous UAVs in unknown 3D environments**
+
+[![Stars](https://img.shields.io/github/stars/jonasctrl/monocular-slam-drone?style=social)](https://github.com/jonasctrl/monocular-slam-drone/stargazers)
+[![Forks](https://img.shields.io/github/forks/jonasctrl/monocular-slam-drone?style=social)](https://github.com/jonasctrl/monocular-slam-drone/network/members)
+[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/jonasctrl/monocular-slam-drone?color=brightgreen)](https://github.com/jonasctrl/monocular-slam-drone/releases)
+[![DOI](https://img.shields.io/badge/DOI-10.3390%2Fdrones9040236-blue)](https://doi.org/10.3390/drones9040236)
+
+> **Snapshot:** see **[v1.0.0](https://github.com/jonasctrl/monocular-slam-drone/releases/tag/v1.0.0)** for the exact code and assets used in the MDPI paper.
+
+<!-- TOC depthFrom:2 depthTo:3 withLinks:1 updateOnSave:1 orderedList:0 -->
+
+## About the Project
+This open-source framework performs real-time **monocular depth estimation**, builds a 3D voxel occupancy grid, and runs an **A*** path-planning algorithm so a drone can reach goals while avoiding obstacles. All development and benchmarking occur in **AirSim** (Unreal Engine).
+
+<p align="center">
+  <img src="./assets/gifs/fly-example.gif"
+       alt="GIF demo: monocular-SLAM drone avoiding obstacles in AirSim"
+       width="1080">
+</p>
+
+> **Note** – The current implementation is a proof-of-concept; please refer to the paper for real-world considerations.
+
 ## Citation
 When using A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation, please cite the following journal paper ([pdf](https://www.mdpi.com/2504-446X/9/4/236/pdf), [website](https://www.mdpi.com/2504-446X/9/4/236))
+
 ```bibtex
-@article{monocular-slam-drone,
-  title={A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation},
-  author={Gaigalas Jonas and Perkauskas Linas and Gricius Henrikas and Kanapickas Tomas and Kriščiūnas Andrius},
-  journal={Drones},
-  year={2025},
-  publisher={MDPI},
+@article{gaigalas2025framework,
+  title   = {A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation},
+  author  = {Gaigalas, Jonas and Perkauskas, Linas and Gricius, Henrikas
+             and Kanapickas, Tomas and Kriščiūnas, Andrius},
+  journal = {Drones},
+  volume  = {9},
+  number  = {4},
+  pages   = {236},
+  year    = {2025},
+  doi     = {10.3390/drones9040236}
 }
-```
+````
 
 ## Prerequisites
 
 - Docker installed (with docker-compose support)
-- NVIDIA GPU and drivers with CUDA support for GPU acceleration _(optional)_
-- X11 server running for displaying graphical applications _(optional)_
+- _(optional)_ NVIDIA GPU and drivers with CUDA support for GPU acceleration 
+- _(optional)_ X11 server running for displaying graphical applications 
 
 > [!tip]
 > If using Windows, you can set up `VcXsrv` as your X11 server. Instructions are provided in the "Setting Up X11 Server" section below.
@@ -148,4 +167,4 @@ xhost +
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+Distributed under the **BSD 3-Clause License** – see [`LICENSE`](./LICENSE).
