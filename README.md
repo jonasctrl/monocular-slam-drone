@@ -1,5 +1,5 @@
 # A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation  
-**ROS-Noetic monocular-SLAM with A* path-planner for autonomous UAVs in unknown 3D environments**
+**ROS-Noetic monocular-SLAM with A\* path-planner for autonomous UAVs in unknown 3D environments**
 
 [![Stars](https://img.shields.io/github/stars/jonasctrl/monocular-slam-drone?style=social)](https://github.com/jonasctrl/monocular-slam-drone/stargazers)
 [![Forks](https://img.shields.io/github/forks/jonasctrl/monocular-slam-drone?style=social)](https://github.com/jonasctrl/monocular-slam-drone/network/members)
