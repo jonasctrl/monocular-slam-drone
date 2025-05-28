@@ -26,16 +26,12 @@ This open-source framework performs real-time **monocular depth estimation**, bu
 When using A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation, please cite the following journal paper ([pdf](https://www.mdpi.com/2504-446X/9/4/236/pdf), [website](https://www.mdpi.com/2504-446X/9/4/236))
 
 ```bibtex
-@article{gaigalas2025framework,
-  title   = {A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation},
-  author  = {Gaigalas, Jonas and Perkauskas, Linas and Gricius, Henrikas
-             and Kanapickas, Tomas and Kriščiūnas, Andrius},
-  journal = {Drones},
-  volume  = {9},
-  number  = {4},
-  pages   = {236},
-  year    = {2025},
-  doi     = {10.3390/drones9040236}
+@article{monocular-slam-drone,
+  title={A Framework for Autonomous UAV Navigation Based on Monocular Depth Estimation},
+  author={Gaigalas Jonas and Perkauskas Linas and Gricius Henrikas and Kanapickas Tomas and Kriščiūnas Andrius},
+  journal={Drones},
+  year={2025},
+  publisher={MDPI},
 }
 ````
 
